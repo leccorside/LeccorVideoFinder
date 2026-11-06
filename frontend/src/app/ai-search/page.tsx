@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,22 @@ export default function AISearchPage() {
   );
   const [selectedModel, setSelectedModel] = useState<'qwen2.5vl:7b' | 'gpt-oss:20b'>('qwen2.5vl:7b');
   const [semanticMode, setSemanticMode] = useState<'hybrid' | 'deep_semantic'>('hybrid');
+  const [isOllamaReady, setIsOllamaReady] = useState(true);
+  const [availableModels, setAvailableModels] = useState<string[]>(['qwen2.5vl:7b', 'gpt-oss:20b']);
+
+  useEffect(() => {
+    fetch('/api/ai/models')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setIsOllamaReady(data.is_available);
+          if (Array.isArray(data.models) && data.models.length > 0) {
+            setAvailableModels(data.models);
+          }
+        }
+      })
+      .catch((err) => console.log('Ollama status check:', err));
+  }, []);
 
   const semanticVariants: SemanticVariant[] = [
     { title: 'Histórias reais de superação após falências e rejeições', category: 'Biografias', icon: 'auto_stories' },
@@ -50,10 +66,12 @@ export default function AISearchPage() {
 
         {/* Status do Modelo no Host */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-container-lowest border border-[#27272A] shrink-0">
-          <span className="h-2 w-2 rounded-full bg-secondary-neon animate-pulse" />
+          <span className={cn("h-2 w-2 rounded-full", isOllamaReady ? "bg-secondary-neon animate-pulse" : "bg-tertiary-neon")} />
           <div className="flex flex-col text-left">
-            <span className="font-mono text-[10px] text-outline uppercase font-semibold">Ollama Host Conectado</span>
-            <span className="font-mono text-xs text-secondary-neon font-semibold">Porta: 11435</span>
+            <span className="font-mono text-[10px] text-outline uppercase font-semibold">
+              {isOllamaReady ? 'Ollama Host Ativo' : 'Ollama Offline (Modo Léxico)'}
+            </span>
+            <span className="font-mono text-xs text-secondary-neon font-semibold">Porta: 18434 / 11434</span>
           </div>
         </div>
       </div>

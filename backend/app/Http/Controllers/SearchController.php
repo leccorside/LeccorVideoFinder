@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\SearchQueryDTO;
+use App\Services\AI\SemanticSearchOrchestrator;
 use App\Services\Cache\VideoSearchCache;
 use App\Services\Providers\DailymotionProvider;
 use App\Services\Providers\RedditProvider;
@@ -22,6 +23,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class SearchController extends Controller
 {
     protected UniversalSearchOrchestrator $orchestrator;
+    protected SemanticSearchOrchestrator $semanticOrchestrator;
     protected YouTubeQuotaGuard $quotaGuard;
     protected VideoSearchCache $cache;
 
@@ -33,6 +35,7 @@ class SearchController extends Controller
         $this->cache = new VideoSearchCache();
 
         $this->orchestrator = new UniversalSearchOrchestrator($deduplicator, $scorer);
+        $this->semanticOrchestrator = new SemanticSearchOrchestrator($this->orchestrator);
 
         $searxngUrl = env('SEARXNG_URL', 'http://searxng:8080');
 
@@ -88,7 +91,12 @@ class SearchController extends Controller
         ]);
 
         $queryDTO = SearchQueryDTO::fromArray($validated);
-        $response = $this->orchestrator->search($queryDTO);
+
+        if ($queryDTO->mode === 'ai_semantic') {
+            $response = $this->semanticOrchestrator->search($queryDTO);
+        } else {
+            $response = $this->orchestrator->search($queryDTO);
+        }
 
         return response()->json([
             'success' => true,

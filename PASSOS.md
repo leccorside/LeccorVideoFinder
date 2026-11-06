@@ -14,7 +14,7 @@
 | **3** | **Universal Video Search Engine (Core do Mecanismo)** | `CONCLUIDO` | Etapa 1, 2 |
 | **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `CONCLUIDO` | Etapa 3 |
 | **5** | **Expansão de Plataformas (Vimeo, Dailymotion, Reddit, Twitch, TikTok, etc.)** | `CONCLUIDO` | Etapa 4 |
-| **6** | **Inteligência Artificial Local e Busca Semântica (Ollama)** | `PENDENTE` | Etapa 3, 5 |
+| **6** | **Inteligência Artificial Local e Busca Semântica (Ollama)** | `CONCLUIDO` | Etapa 3, 5 |
 | **7** | **Pesquisa em Transcrições e Timestamps ("Encontrar Trecho")** | `PENDENTE` | Etapa 4, 6 |
 | **8** | **Autenticação, Favoritos, Coleções e Histórico** | `PENDENTE` | Etapa 1, 3 |
 | **9** | **Painel Admin Master e Telemetria de Quotas** | `PENDENTE` | Etapa 4, 8 |
@@ -169,7 +169,7 @@
 - **Critérios de Aceitação:**
   - Buscas complexas em linguagem natural (ex: "vídeos motivacionais sobre superar fracassos") ativam termos sinônimos automaticamente.
   - A desativação intencional do Ollama não quebra a busca da aplicação.
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 3, 5
 
 ---

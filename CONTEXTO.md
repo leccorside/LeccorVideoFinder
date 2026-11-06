@@ -157,5 +157,12 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Implementado `RedditProvider` localizando posts com vídeos hospedados (`v.redd.it` e `r/videos`).
   - Implementado `SocialReelsDiscoveryProvider` cobrindo vídeos no formato vertical (Instagram Reels).
   - Orquestrador agora despacha 7 fontes de pesquisa com isolamento de falhas, retornando mais de 140 vídeos reais deduplicados por consulta ampla.
-- [ ] **Etapa 6 (Próxima):** Inteligência Artificial Local e Busca Semântica (Ollama) — Conectar os modelos já existentes no host (`qwen2.5vl:7b` e `gpt-oss:20b`) via container `videofinder-ollama` para expansão de queries e similaridade cosseno de vetores.
+- [x] **Etapa 6 Concluída (Inteligência Artificial Local e Busca Semântica - Ollama):**
+  - Implementado `OllamaService` conectando aos modelos já pré-instalados no host (`qwen2.5vl:7b` e `gpt-oss:20b`) via container `videofinder-ollama` sem download de modelos da internet.
+  - Implementado `CosineSimilarity` para cálculo vetorial por similaridade cosseno de alta performance.
+  - Implementado `QueryExpander` para identificação de intenções e termos sinônimos com cache Redis de 72 horas e fallback léxico automático para zero lentidão.
+  - Implementado `SemanticSearchOrchestrator` com enriquecimento de consultas, geração de síntese explicativa e acoplamento no fluxo do `SearchController`.
+  - Criados endpoints `GET /api/ai/models`, `POST /api/ai/expand` e `POST /api/ai/synthesize`.
+  - Interface `/ai-search` conectada com telemetria ao vivo dos modelos do host e atalho direto para busca interpretada.
+- [ ] **Etapa 7 (Próxima):** Pesquisa em Transcrições e Timestamps ("Encontrar Trecho") — Criar persistência de legendas com minutagens e atalho para reprodução direta no momento exato do vídeo (`&t=...s`).
 
