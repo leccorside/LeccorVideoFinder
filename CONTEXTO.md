@@ -117,6 +117,9 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
 7. **Isolamento de Portas no Docker (Faixa 18000):** Para evitar colisões com outros contêineres e aplicações ativas no host (como serviços existentes nas portas 4100-4103), o VideoFinder roda 100% conteinerizado nas portas: Nginx (18080), Frontend (18300), Backend (18000), MySQL (18306), Redis (18379), SearXNG (18081) e Ollama (18434).
 8. **YouTube Quota Guard com Fallback Automático para SearXNG:** O `YouTubeQuotaGuard` monitora os 10.000 pontos diários gratuitos da YouTube Data API v3 no Redis. Caso a chave de API não esteja configurada ou o consumo atinja 9.000 pontos, o sistema ativa imediatamente o fallback para o `SearXNGWebVideoProvider`, que busca vídeos do YouTube e de redes sociais de forma contínua, gratuita e sem limites rígidos de quota.
 9. **Camada de Cache Redis de Dois Níveis:** Consultas idênticas são cacheadas por 24 horas no Redis (`videofinder:search:*`), respondendo em ~1ms. Metadados estendidos de vídeos são preservados por 72 horas (`videofinder:video:*`).
+10. **Autenticação Híbrida e Graciosa (Sanctum + Fallback Local):** Em ambiente aberto ou consultas sem login prévio, o sistema não bloqueia o fluxo de pesquisa. Ele utiliza o usuário local `dev@videofinder.local` para salvar histórico e favoritos, permitindo que a aplicação funcione imediatamente sem barreiras. Quando o usuário cria conta ou faz login pelo `AuthModal`, a sessão passa a emitir e persistir tokens Bearer via Sanctum.
+11. **Deduplicação e Preservação de Favoritos:** O modelo `FavoriteVideo` armazena a `canonical_url` e o `external_id` normalizados. Ao deletar ou verificar um favorito, o sistema permite lookup tanto pelo ID relacional numérico quanto pela chave canônica (`youtube:ID`, `tiktok:ID`, etc.), garantindo sincronização instantânea com a interface.
+12. **Store Reativo de Autenticação com Zustand:** O estado de autenticação no frontend Next.js é centralizado em `authStore.ts`, garantindo que ações de login, cadastro, logout ou expiração de token atualizem reativamente o avatar no cabeçalho, as coleções e os favoritos sem recarregar a página inteira.
 
 ---
 
@@ -187,9 +190,9 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - `SystemSettingsController.php` (Admin): parametrização de TTLs de cache, modelo padrão de IA e expurgo completo do Redis (`/api/admin/cache/flush-all`).
   - Telas frontend Obsidian Signal: `/dashboard`, `/admin/dashboard`, `/admin/providers` e `/settings` totalmente conectadas à API.
 - [x] **Etapa 10 Concluída (Garantia de Qualidade, Testes Automatizados e Auditoria de Segurança):**
-  - Configuração do PHPUnit 11 no backend conteinerizado.
-  - Implementação de 20 testes automatizados cobrindo Deduplicação Canônica, Pontuação de Relevância, APIs de Busca e Administração, e Validações de Segurança (XSS, SQL Injection e proteção de rotas).
-  - 100% dos testes aprovados com sucesso (`OK (20 tests, 64 assertions)`).
+  - Configuração do PHPUnit 11 no backend conteinerizado com suítes Unit e Feature.
+  - Implementação de 25 testes automatizados cobrindo Deduplicação Canônica, Pontuação de Relevância, APIs de Busca e Administração, Fluxos de Autenticação/Favoritos, e Validações de Segurança (XSS, SQL Injection e proteção de rotas).
+  - 100% dos testes aprovados com sucesso (`OK (25 tests, 88 assertions)`).
   - Compilação estática Next.js validada sem erros com geração de 12 rotas prontas para produção.
-  - Auditoria completa de todos os 20 critérios de aceitação do `PROMPT.md` com status 200 em todos os serviços.
+  - Auditoria completa de todos os 20 critérios de aceitação do `PROMPT.md` com status 200 em todos os serviços e endpoints.
 
