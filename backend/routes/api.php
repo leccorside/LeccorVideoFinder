@@ -80,11 +80,13 @@ Route::delete('/history/{id}', [HistoryController::class, 'destroy']);
 // Painel Admin Master & Telemetria
 Route::prefix('admin')->middleware(AdminMasterMiddleware::class)->group(function () {
     Route::get('/metrics', [AdminDashboardController::class, 'metrics']);
+    Route::get('/metrics/export', [AdminDashboardController::class, 'export']);
     Route::get('/providers', [AdminProviderController::class, 'index']);
     Route::post('/providers/{id}/toggle', [AdminProviderController::class, 'toggle']);
     Route::post('/providers/{id}/test', [AdminProviderController::class, 'test']);
     Route::post('/providers/{id}/reset-circuit', [AdminProviderController::class, 'resetCircuit']);
     Route::get('/settings', [AdminSettingsController::class, 'index']);
     Route::put('/settings', [AdminSettingsController::class, 'update']);
+    Route::post('/ai/test-inference', [AdminSettingsController::class, 'testInference']);
     Route::post('/cache/flush-all', [AdminSettingsController::class, 'flushAll']);
 });

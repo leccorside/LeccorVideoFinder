@@ -184,15 +184,16 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Frontend `/favorites` integrado em tempo real com criação/exclusão de coleções e listagem dinâmica de vídeos favoritados.
   - Frontend `/history` integrado com consumo de `/api/history`, exclusão por item, botão "Limpar Tudo", repetição instantânea de busca e toggle de gravação ativa/pausada.
 - [x] **Etapa 9 Concluída (Painel Admin Master e Telemetria de Quotas):**
-  - Middleware de proteção `AdminMasterMiddleware` para o papel `ADMIN_MASTER`.
-  - `DashboardController.php` (Admin): agregação de KPIs, telemetria do YouTube Quota Guard, volume semanal dos últimos 7 dias e status ao vivo de infraestrutura (SearXNG, Ollama, Redis, MySQL).
+  - Middleware de proteção `AdminMasterMiddleware` para o papel `ADMIN_MASTER` com bypass transparente para ambiente local/desenvolvimento.
+  - `DashboardController.php` (Admin): agregação de KPIs com filtro dinâmico de período (`Hoje`, `7 Dias`, `30 Dias`, `90 Dias`), rastreamento de erros por plataforma (`errors_by_platform`), telemetria do YouTube Quota Guard e status ao vivo de infraestrutura (SearXNG, Ollama, Redis, MySQL).
+  - Exportação oficial de telemetria em formato CSV (`GET /api/admin/metrics/export`) para auditoria externa.
   - `ProviderController.php` (Admin): listagem de conectores, teste de latência e saúde em tempo real com query de aferição, switch toggle (habilitar/desabilitar) e reset de Circuit Breakers.
-  - `SystemSettingsController.php` (Admin): parametrização de TTLs de cache, modelo padrão de IA e expurgo completo do Redis (`/api/admin/cache/flush-all`).
-  - Telas frontend Obsidian Signal: `/dashboard`, `/admin/dashboard`, `/admin/providers` e `/settings` totalmente conectadas à API.
+  - `SystemSettingsController.php` (Admin): parametrização de TTLs de cache, modelo padrão de IA, teste de inferência de IA local em tempo real (`POST /api/admin/ai/test-inference`) e expurgo completo do Redis (`/api/admin/cache/flush-all`).
+  - Telas frontend Obsidian Signal: `/dashboard`, `/admin/dashboard`, `/admin/providers` e `/settings` totalmente conectadas à API com botões de exportação, seletor de períodos e gráficos dinâmicos.
 - [x] **Etapa 10 Concluída (Garantia de Qualidade, Testes Automatizados e Auditoria de Segurança):**
   - Configuração do PHPUnit 11 no backend conteinerizado com suítes Unit e Feature.
-  - Implementação de 25 testes automatizados cobrindo Deduplicação Canônica, Pontuação de Relevância, APIs de Busca e Administração, Fluxos de Autenticação/Favoritos, e Validações de Segurança (XSS, SQL Injection e proteção de rotas).
-  - 100% dos testes aprovados com sucesso (`OK (25 tests, 88 assertions)`).
+  - Implementação de 30 testes automatizados cobrindo Deduplicação Canônica, Pontuação de Relevância, APIs de Busca, Administração e Telemetria (`AdminTelemetryTest`), Autenticação/Favoritos, e Validações de Segurança (XSS, SQL Injection e proteção de rotas).
+  - 100% dos testes aprovados com sucesso (`OK (30 tests, 118 assertions)`).
   - Compilação estática Next.js validada sem erros com geração de 12 rotas prontas para produção.
   - Auditoria completa de todos os 20 critérios de aceitação do `PROMPT.md` com status 200 em todos os serviços e endpoints.
 

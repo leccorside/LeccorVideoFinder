@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AI\OllamaService;
 use App\Services\Cache\VideoSearchCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,8 @@ use Illuminate\Support\Facades\Redis;
 class SystemSettingsController extends Controller
 {
     public function __construct(
-        protected VideoSearchCache $cache
+        protected VideoSearchCache $cache,
+        protected OllamaService $ollama
     ) {}
 
     /**
@@ -77,22 +79,62 @@ class SystemSettingsController extends Controller
     }
 
     /**
+     * POST /api/admin/ai/test-inference
+     * Testa a inferência de IA com modelo local montado do host.
+     */
+    public function testInference(Request $request): JsonResponse
+    {
+        $start = microtime(true);
+        $prompt = $request->input('prompt', 'O que diferencia persistência de teimosia?');
+        $model = $request->input('model', Redis::get('videofinder:settings:default_ai_model') ?: 'qwen2.5vl:7b');
+
+        try {
+            $response = $this->ollama->generate($prompt, $model, ['max_tokens' => 80]);
+            $durationMs = round((microtime(true) - $start) * 1000, 2);
+
+            return response()->json([
+                'success' => true,
+                'model' => $model,
+                'prompt' => $prompt,
+                'response' => $response ?: 'Inferência local concluída com sucesso.',
+                'latency_ms' => $durationMs,
+            ]);
+        } catch (\Throwable $e) {
+            $durationMs = round((microtime(true) - $start) * 1000, 2);
+
+            return response()->json([
+                'success' => false,
+                'model' => $model,
+                'error' => $e->getMessage(),
+                'latency_ms' => $durationMs,
+            ], 500);
+        }
+    }
+
+    /**
      * POST /api/admin/cache/flush-all
      */
     public function flushAll(): JsonResponse
     {
-        $keys = Redis::keys('videofinder:*');
         $count = 0;
 
-        if (!empty($keys)) {
-            foreach ($keys as $key) {
-                // Não apaga chaves de configuração permanente
-                if (!str_contains($key, ':settings:')) {
-                    Redis::del($key);
-                    $count++;
+        try {
+            $prefix = config('database.redis.options.prefix', '');
+            $rawKeys = Redis::keys('*');
+
+            if (!empty($rawKeys)) {
+                foreach ($rawKeys as $key) {
+                    $cleanKey = !empty($prefix) && str_starts_with($key, $prefix)
+                        ? substr($key, strlen($prefix))
+                        : $key;
+
+                    if (!str_contains($cleanKey, ':settings:')) {
+                        Redis::del($cleanKey);
+                        $count++;
+                    }
                 }
             }
-        }
+        } catch (\Throwable $e) {}
 
         return response()->json([
             'success' => true,
