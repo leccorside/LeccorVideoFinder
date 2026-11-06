@@ -11,8 +11,8 @@
 | :---: | :--- | :---: | :--- |
 | **1** | **Estrutura Inicial e Infraestrutura Conteinerizada** | `CONCLUIDO` | Nenhuma |
 | **2** | **Interface e Design System Obsidian Signal** | `CONCLUIDO` | Etapa 1 |
-| **3** | **Universal Video Search Engine (Core do Mecanismo)** | `PENDENTE` | Etapa 1, 2 |
-| **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `PENDENTE` | Etapa 3 |
+| **3** | **Universal Video Search Engine (Core do Mecanismo)** | `CONCLUIDO` | Etapa 1, 2 |
+| **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `CONCLUIDO` | Etapa 3 |
 | **5** | **Expansão de Plataformas (Vimeo, Dailymotion, Reddit, Twitch, TikTok, etc.)** | `PENDENTE` | Etapa 4 |
 | **6** | **Inteligência Artificial Local e Busca Semântica (Ollama)** | `PENDENTE` | Etapa 3, 5 |
 | **7** | **Pesquisa em Transcrições e Timestamps ("Encontrar Trecho")** | `PENDENTE` | Etapa 4, 6 |
@@ -99,7 +99,7 @@
 - **Critérios de Aceitação:**
   - O orquestrador processa buscas simuladas em múltiplos adaptadores retornando lista deduplicada e ranqueada.
   - Resultados chegam à interface progressivamente via SSE sem travamento da UI.
-- **Status:** `EM_ANDAMENTO`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 1, 2
 
 ---
@@ -121,7 +121,7 @@
 - **Critérios de Aceitação:**
   - Uma pesquisa real (ex: "Nunca desista dos seus sonhos") retorna vídeos autênticos do YouTube com links funcionais.
   - Em caso de ausência ou esgotamento de chave do YouTube, a descoberta SearXNG continua localizando vídeos públicos reais.
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 3
 
 ---

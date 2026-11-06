@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\SearchController;
 
 // Rota de Diagnóstico & Saúde dos Serviços
 Route::get('/health', [HealthController::class, 'check']);
@@ -21,3 +22,11 @@ Route::get('/info', function () {
     ]);
 });
 
+// Mecanismo Universal de Busca
+Route::post('/search', [SearchController::class, 'search']);
+Route::get('/search/suggestions', [SearchController::class, 'suggestions']);
+Route::get('/search/{id}/stream', [SearchController::class, 'stream']);
+
+// Telemetria de Quotas e Gestão de Cache
+Route::get('/admin/quota', [SearchController::class, 'quotaStatus']);
+Route::post('/admin/cache/clear', [SearchController::class, 'clearCache']);

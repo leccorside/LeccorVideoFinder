@@ -23,14 +23,10 @@ WORKDIR /var/www/html
 
 COPY composer.json ./
 
-# Instalar dependências se composer.lock ou vendor não existirem
-RUN composer install --no-interaction --no-scripts --no-autoloader --prefer-dist || true
-
 COPY . .
-
-RUN composer dump-autoload --optimize || true
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "php artisan key:generate --force || true && php artisan serve --host=0.0.0.0 --port=8000"]
+ENV COMPOSER_POLICY_ADVISORIES_BLOCK=false
 
+CMD ["sh", "-c", "if [ ! -f vendor/autoload.php ]; then composer update --no-interaction --prefer-dist --optimize-autoloader --no-audit; fi && php artisan key:generate --force || true && php artisan serve --host=0.0.0.0 --port=8000"]

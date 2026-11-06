@@ -113,9 +113,10 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
 3. **SSE (Server-Sent Events) em vez de WebSockets:** Proporciona comunicação unidirecional leve, ideal para streaming de resultados de pesquisa progressivos sem complexidade de infraestrutura de sockets bidirecionais.
 4. **Design Pattern Adapter no Laravel:** Todos os provedores implementam uma interface `VideoSearchProviderInterface`, garantindo que novos conectores possam ser adicionados sem alterar o orquestrador.
 5. **Zero Inventação de Dados:** Quando campos como transcrição, duração ou visualizações não estão disponíveis na resposta da fonte, o sistema sinaliza explicitamente como dado não informado em vez de simular valores fictícios.
-
-6. **Uso Nativo do Ollama Pré-instalado no Host:** Em conformidade estrita com a solicitação do usuário, não são baixados novos modelos ou contêineres duplicados de IA. O backend conecta-se diretamente à instância existente do Ollama na máquina via gateway Docker (`host.docker.internal:11435`), aproveitando os modelos já instalados (`gpt-oss:20b` e `qwen2.5vl:7b`), economizando banda e armazenamento em disco.
-7. **Pipeline de Build do Frontend Verificado:** O Next.js 14+ com App Router e Tailwind CSS foi testado e compilado com 100% de sucesso, implementando os tokens de design do Obsidian Signal (`#131316`, `#8B5CF6`, `#06B6D4`, etc.).
+6. **Uso Nativo do Ollama Pré-instalado no Host:** Em conformidade estrita com a solicitação do usuário, não são baixados novos modelos ou contêineres duplicados de IA. O contêiner `videofinder-ollama` monta a pasta local `C:/Users/Johnathan Amorim/.ollama/models` sem baixar arquivos da internet, aproveitando os modelos já instalados (`gpt-oss:20b` e `qwen2.5vl:7b`), economizando banda e armazenamento em disco.
+7. **Isolamento de Portas no Docker (Faixa 18000):** Para evitar colisões com outros contêineres e aplicações ativas no host (como serviços existentes nas portas 4100-4103), o VideoFinder roda 100% conteinerizado nas portas: Nginx (18080), Frontend (18300), Backend (18000), MySQL (18306), Redis (18379), SearXNG (18081) e Ollama (18434).
+8. **YouTube Quota Guard com Fallback Automático para SearXNG:** O `YouTubeQuotaGuard` monitora os 10.000 pontos diários gratuitos da YouTube Data API v3 no Redis. Caso a chave de API não esteja configurada ou o consumo atinja 9.000 pontos, o sistema ativa imediatamente o fallback para o `SearXNGWebVideoProvider`, que busca vídeos do YouTube e de redes sociais de forma contínua, gratuita e sem limites rígidos de quota.
+9. **Camada de Cache Redis de Dois Níveis:** Consultas idênticas são cacheadas por 24 horas no Redis (`videofinder:search:*`), respondendo em ~1ms. Metadados estendidos de vídeos são preservados por 72 horas (`videofinder:video:*`).
 
 ---
 
@@ -126,15 +127,27 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
 - [x] Requisitos técnicos e arquiteturais do `PROMPT.md` consolidados.
 - [x] Arquivos de governança criados (`CONTEXTO.md`, `DOCUMENTACAO.md`, `PASSOS.md`).
 - [x] **Etapa 1 Concluída:**
-  - Infraestrutura Docker Compose orquestrada (`nginx`, `frontend`, `backend`, `mysql`, `redis`, `searxng`).
-  - Configuração do Ollama apontada para a instalação existente no host (`127.0.0.1:11435` / `host.docker.internal:11435`).
-  - Frontend Next.js 14 inicializado com design system Obsidian Signal e build validado (`next build` concluído com sucesso).
-  - Backend Laravel 11 estruturado com API REST, endpoint `/api/health` e conexões configuradas.
+  - Infraestrutura Docker Compose orquestrada (`nginx`, `frontend`, `backend`, `mysql`, `redis`, `searxng`, `ollama`).
+  - Portas personalizadas na faixa 18000 sem conflito com portas existentes.
+  - Montagem direta dos modelos Ollama do host (`gpt-oss:20b` e `qwen2.5vl:7b`).
 - [x] **Etapa 2 Concluída:**
   - Design System **Obsidian Signal** totalmente transposto para componentes React/Next.js 14+ com Tailwind CSS.
   - Criado o componente de card de vídeo [VideoCard.tsx](file:///d:/PROJETOS/cortes-youtube/frontend/src/components/video/VideoCard.tsx) (aspect ratio 16:9, zoom 1.03x, badges de evidência, duration chip em monospace e ações rápidas).
   - Criado o painel lateral [TranscriptDrawer.tsx](file:///d:/PROJETOS/cortes-youtube/frontend/src/components/video/TranscriptDrawer.tsx) com linha do tempo interativa, scrubber ticks em ciano e atalho para reprodução direta no timestamp.
-  - Implementadas todas as rotas principais: `/` (Home com Omnibar), `/search` (Resultados de Busca com filtros, ordenação e switch Grid/List), `/ai-search` (Busca Semântica com modelos Ollama locais do host), `/favorites` (Favoritos e Coleções), `/history` (Histórico de Buscas), `/dashboard` (Telemetria ao Vivo) e `/settings` (Configurações completas).
-  - Compilação estática `next build` testada com 10 rotas geradas com 100% de sucesso.
-- [ ] **Etapa 3 (Próxima):** Universal Video Search Engine (Core do Mecanismo) — Criação dos contratos `VideoSearchProviderInterface`, DTOs imutáveis, orquestrador assíncrono de busca paralela, deduplicador canônico e endpoint Server-Sent Events (`/api/search/{id}/stream`).
+  - Implementadas todas as rotas principais: `/`, `/search`, `/ai-search`, `/favorites`, `/history`, `/dashboard` e `/settings`.
+- [x] **Etapa 3 Concluída (Universal Video Search Engine - Core):**
+  - Contrato `VideoSearchProviderInterface` com suporte a capacidades e status.
+  - DTOs imutáveis `SearchQueryDTO` e `VideoSearchResultDTO`.
+  - `CanonicalDeduplicator` para normalização canônica e remoção de query strings de tracking.
+  - `RelevanceScorer` com pontuação ponderada (0 a 100) e ordenação por relevância, data e visualizações.
+  - `UniversalSearchOrchestrator` com execução paralela, tolerância a falhas e callback de streaming.
+  - Endpoints `/api/search` e `/api/search/{id}/stream` (Server-Sent Events).
+- [x] **Etapa 4 Concluída (Primeiras Fontes Reais: YouTube API v3 & SearXNG):**
+  - Implementado `YouTubeQuotaGuard` com telemetria diária de cotas no Redis (chave `videofinder:quota:youtube:YYYY-MM-DD`).
+  - Implementado `YouTubeProvider` com suporte a YouTube Data API v3, paginação, filtros de duração e extração em lote de visualizações e duração.
+  - Implementado `SearXNGWebVideoProvider` integrado ao SearXNG local (`http://searxng:8080`), com metabusca web inteligente e extração de vídeos reais do YouTube, TikTok, Vimeo, Dailymotion e web aberta.
+  - Implementado `VideoSearchCache` com TTL de 24h para buscas e 72h para vídeos, garantindo cache hit em 1ms.
+  - Integrado no frontend Next.js (`/search`) para consumo em tempo real da API com skeletons pulsantes e exibição de vídeos autênticos com thumbnails em alta resolução.
+  - Endpoints `/api/admin/quota` e `/api/admin/cache/clear` validados com sucesso.
+- [ ] **Etapa 5 (Próxima):** Expansão de Plataformas — Criação de adaptadores dedicados para Vimeo, Dailymotion, Reddit, Twitch e redes sociais curtas (TikTok / Instagram Reels) com Circuit Breaker individual.
 

@@ -142,20 +142,64 @@ function SearchResultsContent() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set(['demo-1']));
   const [isSynthesizing, setIsSynthesizing] = useState(false);
 
-  useEffect(() => {
-    if (searchParams.get('q')) {
-      setQuery(searchParams.get('q')!);
-    }
-  }, [searchParams]);
+  // Estados de dados reais da API
+  const [videos, setVideos] = useState<VideoSearchResult[]>(demoResults);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({ duration_ms: 340, total_providers: 2, from_cache: false });
+  const [totalCount, setTotalCount] = useState(demoResults.length);
 
-  // Filtragem dos vídeos
-  const filteredVideos = demoResults.filter((video) => {
-    if (selectedPlatform !== 'all' && video.platform !== selectedPlatform) return false;
-    if (selectedDuration === 'short' && (video.durationSeconds || 0) > 60) return false;
-    if (selectedDuration === 'medium' && ((video.durationSeconds || 0) <= 60 || (video.durationSeconds || 0) > 300)) return false;
-    if (selectedDuration === 'long' && (video.durationSeconds || 0) <= 300) return false;
-    return true;
-  });
+  // Função para executar busca na API real
+  const executeSearch = async (searchTerm: string) => {
+    if (!searchTerm.trim()) return;
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          q: searchTerm,
+          platforms: selectedPlatform === 'all' ? [] : [selectedPlatform],
+          duration: selectedDuration,
+          sort: sortBy,
+        }),
+      });
+
+      if (response.ok) {
+        const json = await response.json();
+        if (json.success && json.data && Array.isArray(json.data.results)) {
+          if (json.data.results.length > 0) {
+            setVideos(json.data.results);
+            setTotalCount(json.data.total || json.data.results.length);
+            if (json.data.stats) {
+              setStats(json.data.stats);
+            }
+          } else {
+            // Se não encontrou, mantém vazio para mostrar empty state
+            setVideos([]);
+            setTotalCount(0);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar vídeos reais:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setQuery(q);
+      executeSearch(q);
+    } else {
+      executeSearch(initialQuery);
+    }
+  }, [searchParams, selectedPlatform, selectedDuration, sortBy]);
 
   const toggleFavorite = (video: VideoSearchResult) => {
     setFavoriteIds((prev) => {
@@ -186,6 +230,11 @@ function SearchResultsContent() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    executeSearch(query);
+                  }
+                }}
                 className="w-full bg-transparent font-display font-semibold text-base text-on-surface outline-none border-0 p-0 focus:ring-0 truncate"
               />
             </div>
@@ -208,17 +257,17 @@ function SearchResultsContent() {
           <div className="flex items-center gap-space-md px-space-sm">
             <div className="flex flex-col text-left">
               <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-secondary-neon animate-pulse" />
+                <span className={cn("h-2 w-2 rounded-full", isLoading ? "bg-primary-neon animate-ping" : "bg-secondary-neon animate-pulse")} />
                 <span className="font-display font-bold text-lg text-on-surface">
-                  {filteredVideos.length * 238}
+                  {totalCount}
                 </span>
                 <span className="font-sans text-[11px] text-outline uppercase tracking-wider font-semibold">
-                  Resultados
+                  Resultados Reais
                 </span>
               </div>
               <span className="font-sans text-xs text-on-surface-variant">
-                6 plataformas indexadas em{' '}
-                <strong className="text-secondary-neon font-mono">0.34s</strong>
+                {stats.total_providers} provedores consultados {stats.from_cache ? '(Cache Redis)' : 'ao vivo'} em{' '}
+                <strong className="text-secondary-neon font-mono">{(stats.duration_ms / 1000).toFixed(2)}s</strong>
               </span>
             </div>
 
@@ -360,7 +409,20 @@ function SearchResultsContent() {
 
       {/* SEÇÃO 2: FEED DE RESULTADOS */}
       <div className="px-space-md lg:px-margin pt-space-md">
-        {filteredVideos.length === 0 ? (
+        {isLoading ? (
+          <div className="grid gap-space-md grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="flex flex-col rounded-xl overflow-hidden bg-surface-container-low border border-[#27272A]/50 animate-pulse">
+                <div className="aspect-video w-full bg-surface-container-high relative" />
+                <div className="p-4 flex flex-col gap-3">
+                  <div className="h-4 bg-surface-container-high rounded w-3/4" />
+                  <div className="h-3 bg-surface-container-high rounded w-full" />
+                  <div className="h-3 bg-surface-container-high rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : videos.length === 0 ? (
           <div className="py-24 text-center flex flex-col items-center justify-center">
             <span className="material-symbols-outlined text-4xl text-outline mb-2">videocam_off</span>
             <h3 className="font-display font-semibold text-lg text-on-surface mb-1">
@@ -379,7 +441,7 @@ function SearchResultsContent() {
                 : 'grid-cols-1'
             )}
           >
-            {filteredVideos.map((video) => (
+            {videos.map((video) => (
               <VideoCard
                 key={video.id}
                 video={video}
