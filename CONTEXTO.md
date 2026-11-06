@@ -172,10 +172,13 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Criados endpoints `GET /api/videos/{platform}/{externalId}/transcript`, `POST /api/videos/{platform}/{externalId}/transcript` e `POST /api/transcript/search`.
   - Integrado ao componente `TranscriptDrawer.tsx` no Next.js com carregamento assíncrono via API, scrubber interativo de densidade de áudio e botão de cópia de link no segundo exato com feedback visual.
 - [x] **Etapa 8 Concluída (Autenticação, Favoritos, Coleções e Histórico):**
-  - Autenticação SPA configurada com Laravel Sanctum v4 (`personal_access_tokens`).
+  - Autenticação SPA configurada com Laravel Sanctum v4 (`personal_access_tokens`) com emissão de Bearer Tokens e cookies seguros.
   - Migração relacional criada no MySQL: `users`, `collections`, `favorite_videos`, `search_history`.
   - Controladores Eloquent: `AuthController.php`, `CollectionController.php`, `FavoriteController.php`, `HistoryController.php`.
-  - Frontend `/favorites` integrado em tempo real com criação de coleções e listagem dinâmica de vídeos favoritados.
+  - Store Zustand `authStore.ts` gerenciando sessão, login, registro, logout e verificação de perfil (`/api/auth/me`).
+  - Componente `AuthModal.tsx` com alternância entre Entrar e Criar Conta, acessível diretamente pelo dropdown de perfil do `Header.tsx`.
+  - Persistência ponta a ponta de favoritos: clicar no marcador de qualquer card de vídeo em `/search` salva/remove o item no MySQL (`POST/DELETE /api/favorites`).
+  - Frontend `/favorites` integrado em tempo real com criação/exclusão de coleções e listagem dinâmica de vídeos favoritados.
   - Frontend `/history` integrado com consumo de `/api/history`, exclusão por item, botão "Limpar Tudo", repetição instantânea de busca e toggle de gravação ativa/pausada.
 - [x] **Etapa 9 Concluída (Painel Admin Master e Telemetria de Quotas):**
   - Middleware de proteção `AdminMasterMiddleware` para o papel `ADMIN_MASTER`.

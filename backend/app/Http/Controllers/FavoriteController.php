@@ -102,7 +102,7 @@ class FavoriteController extends Controller
             'success' => true,
             'message' => 'Vídeo salvo nos favoritos!',
             'data' => $favorite->toPayload(),
-        ]);
+        ], 201);
     }
 
     /**

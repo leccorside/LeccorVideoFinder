@@ -13,75 +13,34 @@ interface Collection {
   icon: string;
 }
 
-const mockCollections: Collection[] = [
-  { id: 'all', name: 'Todos os Salvos', count: 12, icon: 'bookmarks' },
-  { id: 'col-1', name: 'Motivação & Discursos', count: 6, icon: 'psychology' },
-  { id: 'col-2', name: 'Cortes para Edição', count: 4, icon: 'content_cut' },
-  { id: 'col-3', name: 'Shorts & Reels Virais', count: 2, icon: 'bolt' },
-];
-
-const mockSavedVideos: VideoSearchResult[] = [
-  {
-    id: 'fav-1',
-    platform: 'youtube',
-    externalId: 'dQw4w9WgXcQ',
-    title: 'Disciplina é mais importante que motivação — O Poder do Hábito Diário',
-    description: 'Neste discurso inspirador, exploramos como a constância e o comprometimento superam qualquer pico de motivação.',
-    originalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
-    author: 'Cortes de Sabedoria',
-    durationSeconds: 258,
-    publishedAt: 'há 3 dias',
-    viewsCount: 142000,
-    relevanceScore: 98,
-    matchType: 'transcript_match',
-    matchedSnippet: 'A disciplina é a única ponte que conecta os seus objetivos com a realização prática diária.',
-    matchedTimestamp: 94,
-    transcript: {
-      language: 'pt-BR',
-      isVerified: true,
-      segments: [
-        { startTime: 94, endTime: 112, text: 'A disciplina é a única ponte que conecta os seus objetivos com a realização prática diária.' },
-      ],
-    },
-  },
-  {
-    id: 'fav-2',
-    platform: 'tiktok',
-    externalId: 'tt-82918',
-    title: 'Nunca desista dos seus sonhos, mesmo quando ninguém mais acreditar em você',
-    description: 'Um trecho emocionante sobre persistência após repetidos fracassos e rejeições no início da jornada profissional.',
-    originalUrl: 'https://www.tiktok.com/@motivacao/video/82918291',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&auto=format&fit=crop&q=80',
-    author: '@motivacao_diaria',
-    durationSeconds: 58,
-    publishedAt: 'há 1 semana',
-    viewsCount: 890000,
-    relevanceScore: 94,
-    matchType: 'exact_phrase',
-    matchedSnippet: 'Nunca desista dos seus sonhos, porque o fracasso de ontem é apenas o aprendizado de amanhã.',
-    matchedTimestamp: 12,
-  },
+const initialCollections: Collection[] = [
+  { id: 'all', name: 'Todos os Salvos', count: 0, icon: 'bookmarks' },
 ];
 
 export default function FavoritesPage() {
   const [selectedCollection, setSelectedCollection] = useState('all');
   const [searchFilter, setSearchFilter] = useState('');
-  const [collections, setCollections] = useState(mockCollections);
-  const [savedVideos, setSavedVideos] = useState(mockSavedVideos);
+  const [collections, setCollections] = useState<Collection[]>(initialCollections);
+  const [savedVideos, setSavedVideos] = useState<VideoSearchResult[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedTranscriptVideo, setSelectedTranscriptVideo] = useState<VideoSearchResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar coleções e favoritos reais da API MySQL
-  useEffect(() => {
-    // 1. Coleções
-    fetch('/api/collections')
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+  // Carregar coleções da API
+  const loadCollections = async () => {
+    try {
+      const res = await fetch('/api/collections');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
           const apiCols: Collection[] = [
-            { id: 'all', name: 'Todos os Salvos', count: json.data.reduce((acc: number, c: any) => acc + (c.videos_count || 0), 0), icon: 'bookmarks' },
+            {
+              id: 'all',
+              name: 'Todos os Salvos',
+              count: json.data.reduce((acc: number, c: any) => acc + (c.videos_count || 0), 0),
+              icon: 'bookmarks',
+            },
             ...json.data.map((c: any) => ({
               id: String(c.id),
               name: c.title,
@@ -91,19 +50,38 @@ export default function FavoritesPage() {
           ];
           setCollections(apiCols);
         }
-      })
-      .catch((err) => console.log('Erro ao buscar coleções:', err));
+      }
+    } catch (err) {
+      console.log('Erro ao buscar coleções:', err);
+    }
+  };
 
-    // 2. Favoritos
-    fetch('/api/favorites')
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+  // Carregar favoritos da coleção selecionada
+  const loadFavorites = async (colId: string) => {
+    setIsLoading(true);
+    try {
+      const url = colId === 'all' ? '/api/favorites' : `/api/favorites?collection_id=${colId}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
           setSavedVideos(json.data);
         }
-      })
-      .catch((err) => console.log('Erro ao buscar favoritos:', err));
+      }
+    } catch (err) {
+      console.log('Erro ao buscar favoritos:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCollections();
   }, []);
+
+  useEffect(() => {
+    loadFavorites(selectedCollection);
+  }, [selectedCollection]);
 
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +90,7 @@ export default function FavoritesPage() {
     try {
       const res = await fetch('/api/collections', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ title: newCollectionName.trim() }),
       });
       if (res.ok) {
@@ -124,6 +102,7 @@ export default function FavoritesPage() {
           icon: json.data.icon || 'folder',
         };
         setCollections([...collections, newCol]);
+        setSelectedCollection(String(json.data.id));
       }
     } catch (err) {
       console.log('Erro ao criar coleção:', err);
@@ -133,18 +112,38 @@ export default function FavoritesPage() {
     setIsModalOpen(false);
   };
 
+  const handleDeleteCollection = async (e: React.MouseEvent, colId: string) => {
+    e.stopPropagation();
+    if (!confirm('Deseja excluir esta coleção? Os vídeos permanecerão salvos na biblioteca geral.')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/collections/${colId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCollections((prev) => prev.filter((c) => c.id !== colId));
+        if (selectedCollection === colId) {
+          setSelectedCollection('all');
+        }
+      }
+    } catch (err) {
+      console.log('Erro ao excluir coleção:', err);
+    }
+  };
+
   const handleRemoveFavorite = async (video: VideoSearchResult) => {
     try {
-      await fetch(`/api/favorites/${video.id}`, { method: 'DELETE' });
+      await fetch(`/api/favorites/${video.externalId || video.id}`, { method: 'DELETE' });
     } catch (err) {
       console.log('Erro ao remover favorito:', err);
     }
-    setSavedVideos(savedVideos.filter((v) => v.id !== video.id));
+    setSavedVideos((prev) => prev.filter((v) => v.id !== video.id && v.externalId !== video.externalId));
+    loadCollections();
   };
 
-  const filtered = savedVideos.filter((v) =>
-    v.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    v.author.toLowerCase().includes(searchFilter.toLowerCase())
+  const filtered = savedVideos.filter(
+    (v) =>
+      v.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      (v.author && v.author.toLowerCase().includes(searchFilter.toLowerCase()))
   );
 
   return (
@@ -154,14 +153,14 @@ export default function FavoritesPage() {
         <div>
           <h1 className="font-display font-bold text-2xl text-on-surface">Favoritos & Coleções</h1>
           <p className="font-sans text-xs text-on-surface-variant">
-            Gerencie vídeos salvos, organize pastas temáticas e exporte referências de cortes.
+            Gerencie vídeos salvos no MySQL, organize pastas temáticas e exporte referências de cortes.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold shadow-md hover:bg-primary-hover transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-neon text-surface font-sans text-xs font-semibold shadow-md shadow-primary-neon/20 hover:brightness-110 transition-all"
         >
           <span className="material-symbols-outlined text-[18px]">create_new_folder</span>
           <span>Nova Coleção</span>
@@ -175,12 +174,11 @@ export default function FavoritesPage() {
           {collections.map((col) => {
             const isSelected = selectedCollection === col.id;
             return (
-              <button
+              <div
                 key={col.id}
-                type="button"
                 onClick={() => setSelectedCollection(col.id)}
                 className={cn(
-                  'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl font-sans text-xs transition-all border',
+                  'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-sans text-xs transition-all border cursor-pointer group',
                   isSelected
                     ? 'bg-primary-neon/20 border-primary-neon text-on-surface font-semibold shadow-[0_0_12px_rgba(139,92,246,0.2)]'
                     : 'bg-surface-container-low border-[#27272A] text-outline hover:text-on-surface hover:bg-surface-container-high'
@@ -191,7 +189,18 @@ export default function FavoritesPage() {
                 <span className="px-1.5 py-0.2 rounded-full bg-surface-container-high font-mono text-[10px] text-outline">
                   {col.count}
                 </span>
-              </button>
+
+                {col.id !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteCollection(e, col.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:text-error transition-all"
+                    title="Excluir coleção"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">close</span>
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -212,7 +221,12 @@ export default function FavoritesPage() {
       </div>
 
       {/* Feed de Vídeos Salvos */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="py-20 flex flex-col items-center justify-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-primary-neon/20 border-t-primary-neon animate-spin" />
+          <span className="font-mono text-xs text-outline">Carregando favoritos do banco...</span>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="py-20 text-center flex flex-col items-center justify-center bg-surface-container-low/30 rounded-2xl border border-dashed border-[#27272A]">
           <span className="material-symbols-outlined text-4xl text-outline mb-2">bookmark_border</span>
           <h3 className="font-display font-semibold text-base text-on-surface mb-1">
@@ -223,12 +237,11 @@ export default function FavoritesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">
           {filtered.map((video) => (
             <VideoCard
               key={video.id}
               video={video}
-              layout="grid"
               isFavorited={true}
               onToggleFavorite={() => handleRemoveFavorite(video)}
               onInspectTranscript={(v) => setSelectedTranscriptVideo(v)}
@@ -237,62 +250,62 @@ export default function FavoritesPage() {
         </div>
       )}
 
-      {/* Modal de Criação de Coleção */}
+      {/* Modal Criar Nova Coleção */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <form
-            onSubmit={handleCreateCollection}
-            className="w-full max-w-md bg-surface-container-lowest border border-[#27272A] rounded-2xl p-space-lg shadow-2xl flex flex-col gap-space-md animate-in zoom-in-95 duration-200"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md p-6 rounded-2xl bg-surface-container-low border border-[#27272A] shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-display font-semibold text-lg text-on-surface">Nova Coleção</h3>
+              <h3 className="font-display font-bold text-base text-on-surface">Nova Coleção Temática</h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-outline hover:text-on-surface p-1"
+                className="p-1 rounded-lg text-outline hover:text-on-surface"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="font-sans text-xs text-outline font-medium">Nome da Pasta</label>
-              <input
-                type="text"
-                autoFocus
-                value={newCollectionName}
-                onChange={(e) => setNewCollectionName(e.target.value)}
-                placeholder="Ex: Cortes Motivacionais para Reels..."
-                className="w-full p-2.5 rounded-xl bg-surface-container-low border border-[#27272A] font-sans text-sm text-on-surface focus:outline-none focus:border-primary-neon"
-              />
-            </div>
+            <form onSubmit={handleCreateCollection} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-sans text-xs text-outline font-medium">Nome da Pasta</label>
+                <input
+                  type="text"
+                  required
+                  value={newCollectionName}
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                  placeholder="Ex: Discursos de Liderança"
+                  className="p-2.5 rounded-xl bg-surface-container-lowest border border-[#27272A] font-sans text-xs text-on-surface focus:outline-none focus:border-primary-neon"
+                />
+              </div>
 
-            <div className="flex items-center justify-end gap-2 pt-space-xs">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-outline hover:bg-surface-container-high font-sans text-xs font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:bg-primary-hover shadow-md transition-colors"
-              >
-                Criar Coleção
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-xs font-sans font-medium text-outline"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-primary-neon text-surface text-xs font-sans font-semibold hover:brightness-110"
+                >
+                  Criar Coleção
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* Transcript Drawer */}
-      <TranscriptDrawer
-        video={selectedTranscriptVideo}
-        isOpen={Boolean(selectedTranscriptVideo)}
-        onClose={() => setSelectedTranscriptVideo(null)}
-      />
+      {/* Drawer de Transcrição */}
+      {selectedTranscriptVideo && (
+        <TranscriptDrawer
+          video={selectedTranscriptVideo}
+          isOpen={!!selectedTranscriptVideo}
+          onClose={() => setSelectedTranscriptVideo(null)}
+        />
+      )}
     </div>
   );
 }
-

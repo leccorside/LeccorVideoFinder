@@ -142,6 +142,24 @@ function SearchResultsContent() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set(['demo-1']));
   const [isSynthesizing, setIsSynthesizing] = useState(false);
 
+  // Sincronizar favoritos existentes do MySQL
+  useEffect(() => {
+    fetch('/api/favorites')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          const ids = new Set<string>();
+          json.data.forEach((fav: any) => {
+            if (fav.id) ids.add(String(fav.id));
+            if (fav.externalId) ids.add(String(fav.externalId));
+            if (fav.canonicalUrl) ids.add(String(fav.canonicalUrl));
+          });
+          setFavoriteIds(ids);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Estados de dados reais da API
   const [videos, setVideos] = useState<VideoSearchResult[]>(demoResults);
   const [isLoading, setIsLoading] = useState(false);
@@ -216,16 +234,42 @@ function SearchResultsContent() {
     }
   }, [searchParams, selectedPlatform, selectedDuration, sortBy]);
 
-  const toggleFavorite = (video: VideoSearchResult) => {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(video.id)) {
+  const toggleFavorite = async (video: VideoSearchResult) => {
+    const isFav = favoriteIds.has(video.id) || (video.externalId ? favoriteIds.has(video.externalId) : false);
+
+    if (isFav) {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
         next.delete(video.id);
-      } else {
+        if (video.externalId) next.delete(video.externalId);
+        return next;
+      });
+      fetch(`/api/favorites/${video.externalId || video.id}`, { method: 'DELETE' }).catch(() => {});
+    } else {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
         next.add(video.id);
-      }
-      return next;
-    });
+        if (video.externalId) next.add(video.externalId);
+        return next;
+      });
+      fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          platform: video.platform,
+          externalId: video.externalId || video.id,
+          title: video.title,
+          description: video.description || '',
+          originalUrl: video.originalUrl,
+          thumbnailUrl: video.thumbnailUrl || '',
+          author: video.author || '',
+          durationSeconds: video.durationSeconds || 0,
+          viewsCount: video.viewsCount || 0,
+          matchedTimestamp: video.matchedTimestamp || null,
+          matchedSnippet: video.matchedSnippet || null,
+        }),
+      }).catch(() => {});
+    }
   };
 
   return (
