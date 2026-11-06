@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # Proxy Reverso Unificado
+  nginx:
+    container_name: videofinder-nginx
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./infrastructure/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - videofinder-network
+
+  # Frontend Next.js 14+ (App Router)
+  frontend:
+    container_name: videofinder-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://localhost:${NGINX_PORT:-8080}/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - videofinder-network
+
+  # Backend Laravel 11 (PHP 8.3 REST API)
+  backend:
+    container_name: videofinder-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - APP_NAME=VideoFinder
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:${NGINX_PORT:-8080}
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${MYSQL_DATABASE:-videofinder}
+      - DB_USERNAME=${MYSQL_USER:-videouser}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-videopass}
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SEARXNG_URL=http://searxng:8080
+      - OLLAMA_BASE_URL=http://host.docker.internal:${OLLAMA_PORT:-11435}
+      - OLLAMA_LLM_MODEL=${OLLAMA_LLM_MODEL:-qwen2.5vl:7b}
+      - OLLAMA_EMBEDDING_MODEL=${OLLAMA_EMBEDDING_MODEL:-gpt-oss:20b}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      - YOUTUBE_DAILY_QUOTA_LIMIT=${YOUTUBE_DAILY_QUOTA_LIMIT:-9000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./backend:/var/www/html
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - videofinder-network
+
+  # Banco de Dados MySQL 8.0
+  mysql:
+    container_name: videofinder-mysql
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-videofinder}
+      MYSQL_USER: ${MYSQL_USER:-videouser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-videopass}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER:-videouser}", "-p${MYSQL_PASSWORD:-videopass}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - videofinder-network
+
+  # Cache & Filas Redis 7
+  redis:
+    container_name: videofinder-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - videofinder-network
+
+  # Metabusca Web SearXNG
+  searxng:
+    container_name: videofinder-searxng
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_PORT:-8081}:8080"
+    volumes:
+      - ./infrastructure/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8081}/
+    networks:
+      - videofinder-network
+
+networks:
+  videofinder-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+

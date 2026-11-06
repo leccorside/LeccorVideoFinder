@@ -9,7 +9,7 @@
 
 | Etapa | Descrição | Status | Dependências |
 | :---: | :--- | :---: | :--- |
-| **1** | **Estrutura Inicial e Infraestrutura Conteinerizada** | `PENDENTE` | Nenhuma |
+| **1** | **Estrutura Inicial e Infraestrutura Conteinerizada** | `CONCLUIDO` | Nenhuma |
 | **2** | **Interface e Design System Obsidian Signal** | `PENDENTE` | Etapa 1 |
 | **3** | **Universal Video Search Engine (Core do Mecanismo)** | `PENDENTE` | Etapa 1, 2 |
 | **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `PENDENTE` | Etapa 3 |
@@ -44,8 +44,7 @@
   - O comando `docker compose up -d --build` sobe todos os serviços sem erros.
   - Acesso a `http://localhost:8080/` carrega a aplicação web.
   - Acesso a `http://localhost:8080/api/health` retorna status 200 JSON com estado dos serviços conectados (DB e Redis).
-- **Status:** `PENDENTE`
-- **Dependências:** Nenhuma
+- **Status:** `CONCLUIDO`
 
 ---
 

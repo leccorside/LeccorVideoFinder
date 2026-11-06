@@ -114,6 +114,9 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
 4. **Design Pattern Adapter no Laravel:** Todos os provedores implementam uma interface `VideoSearchProviderInterface`, garantindo que novos conectores possam ser adicionados sem alterar o orquestrador.
 5. **Zero Inventação de Dados:** Quando campos como transcrição, duração ou visualizações não estão disponíveis na resposta da fonte, o sistema sinaliza explicitamente como dado não informado em vez de simular valores fictícios.
 
+6. **Uso Nativo do Ollama Pré-instalado no Host:** Em conformidade estrita com a solicitação do usuário, não são baixados novos modelos ou contêineres duplicados de IA. O backend conecta-se diretamente à instância existente do Ollama na máquina via gateway Docker (`host.docker.internal:11435`), aproveitando os modelos já instalados (`gpt-oss:20b` e `qwen2.5vl:7b`), economizando banda e armazenamento em disco.
+7. **Pipeline de Build do Frontend Verificado:** O Next.js 14+ com App Router e Tailwind CSS foi testado e compilado com 100% de sucesso, implementando os tokens de design do Obsidian Signal (`#131316`, `#8B5CF6`, `#06B6D4`, etc.).
+
 ---
 
 ## 7. Status do Projeto e Próximos Passos
@@ -122,5 +125,10 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
 - [x] Protótipo `uxui` e tokens de design catalogados.
 - [x] Requisitos técnicos e arquiteturais do `PROMPT.md` consolidados.
 - [x] Arquivos de governança criados (`CONTEXTO.md`, `DOCUMENTACAO.md`, `PASSOS.md`).
-- [ ] **Etapa 1:** Estruturação dos esqueletos de contêineres Docker, Frontend Next.js e Backend Laravel (Aguardando comando `"INICIE O PASSO 1"`).
+- [x] **Etapa 1 Concluída:**
+  - Infraestrutura Docker Compose orquestrada (`nginx`, `frontend`, `backend`, `mysql`, `redis`, `searxng`).
+  - Configuração do Ollama apontada para a instalação existente no host (`127.0.0.1:11435` / `host.docker.internal:11435`).
+  - Frontend Next.js 14 inicializado com design system Obsidian Signal e build validado (`next build` concluído com sucesso).
+  - Backend Laravel 11 estruturado com API REST, endpoint `/api/health` e conexões configuradas.
+- [ ] **Etapa 2 (Próxima):** Construção detalhada de todas as telas e componentes da interface baseados nos protótipos em `uxui/` (Resultados de busca, Transcript Drawer, filtros avançados, visualização grid/lista).
 
