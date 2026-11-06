@@ -5,6 +5,7 @@ namespace App\Services\Search;
 use App\Contracts\VideoSearchProviderInterface;
 use App\DTOs\SearchQueryDTO;
 use App\DTOs\VideoSearchResultDTO;
+use App\Services\CircuitBreaker\CircuitBreaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -17,13 +18,16 @@ class UniversalSearchOrchestrator
 
     protected CanonicalDeduplicator $deduplicator;
     protected RelevanceScorer $scorer;
+    protected CircuitBreaker $circuitBreaker;
 
     public function __construct(
         CanonicalDeduplicator $deduplicator,
-        RelevanceScorer $scorer
+        RelevanceScorer $scorer,
+        ?CircuitBreaker $circuitBreaker = null
     ) {
         $this->deduplicator = $deduplicator;
         $this->scorer = $scorer;
+        $this->circuitBreaker = $circuitBreaker ?? new CircuitBreaker();
     }
 
     /**
@@ -76,9 +80,25 @@ class UniversalSearchOrchestrator
             $providerStart = microtime(true);
             $providerId = $provider->getId();
 
+            // Proteção via Circuit Breaker
+            if (!$this->circuitBreaker->isAvailable($providerId)) {
+                Log::warning("CircuitBreaker ativo para [{$providerId}]. Chamada ignorada para proteger latência.");
+                $providerStats[$providerId] = [
+                    'name' => $provider->getName(),
+                    'platform' => $provider->getPlatform(),
+                    'count' => 0,
+                    'duration_ms' => 0,
+                    'status' => 'circuit_open',
+                ];
+                continue;
+            }
+
             try {
                 $results = $provider->search($query);
                 $providerDuration = (int) ((microtime(true) - $providerStart) * 1000);
+
+                // Sucesso: registra no circuit breaker
+                $this->circuitBreaker->recordSuccess($providerId);
 
                 $providerStats[$providerId] = [
                     'name' => $provider->getName(),
@@ -95,6 +115,9 @@ class UniversalSearchOrchestrator
                     $onProviderResult($providerId, $results, $providerStats[$providerId]);
                 }
             } catch (\Throwable $e) {
+                // Falha: registra no circuit breaker
+                $this->circuitBreaker->recordFailure($providerId);
+
                 Log::warning("Falha ao consultar provedor {$providerId}: " . $e->getMessage());
                 $providerStats[$providerId] = [
                     'name' => $provider->getName(),

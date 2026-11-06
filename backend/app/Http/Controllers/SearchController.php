@@ -4,7 +4,12 @@ namespace App\Http\Controllers;
 
 use App\DTOs\SearchQueryDTO;
 use App\Services\Cache\VideoSearchCache;
+use App\Services\Providers\DailymotionProvider;
+use App\Services\Providers\RedditProvider;
 use App\Services\Providers\SearXNGWebVideoProvider;
+use App\Services\Providers\SocialReelsDiscoveryProvider;
+use App\Services\Providers\TikTokDiscoveryProvider;
+use App\Services\Providers\VimeoProvider;
 use App\Services\Providers\YouTubeProvider;
 use App\Services\Providers\YouTubeQuotaGuard;
 use App\Services\Search\CanonicalDeduplicator;
@@ -29,16 +34,33 @@ class SearchController extends Controller
 
         $this->orchestrator = new UniversalSearchOrchestrator($deduplicator, $scorer);
 
-        // Registro de provedores reais da Etapa 4
-        // 1. YouTube API v3 oficial com proteção rígida de cotas
+        $searxngUrl = env('SEARXNG_URL', 'http://searxng:8080');
+
+        // Registro de provedores da arquitetura universal (Etapa 4 & 5)
+        // 1. YouTube Data API v3 oficial (com controle de cota de 10k pontos)
         $this->orchestrator->registerProvider(new YouTubeProvider(
             apiKey: env('YOUTUBE_API_KEY'),
             quotaGuard: $this->quotaGuard
         ));
 
-        // 2. SearXNG Metabusca Web Local (YouTube, TikTok, Vimeo, etc. 100% gratuito)
+        // 2. Dailymotion API oficial pública e gratuita
+        $this->orchestrator->registerProvider(new DailymotionProvider());
+
+        // 3. TikTok Video Discovery
+        $this->orchestrator->registerProvider(new TikTokDiscoveryProvider($searxngUrl));
+
+        // 4. Vimeo Video Discovery
+        $this->orchestrator->registerProvider(new VimeoProvider($searxngUrl));
+
+        // 5. Reddit Video Discovery
+        $this->orchestrator->registerProvider(new RedditProvider($searxngUrl));
+
+        // 6. Instagram Reels & Social Video
+        $this->orchestrator->registerProvider(new SocialReelsDiscoveryProvider($searxngUrl));
+
+        // 7. SearXNG Metabusca Web Geral (Fallback e Agregador Amplo)
         $this->orchestrator->registerProvider(new SearXNGWebVideoProvider(
-            baseUrl: env('SEARXNG_URL', 'http://searxng:8080'),
+            baseUrl: $searxngUrl,
             deduplicator: $deduplicator
         ));
     }

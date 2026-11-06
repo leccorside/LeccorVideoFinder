@@ -13,7 +13,7 @@
 | **2** | **Interface e Design System Obsidian Signal** | `CONCLUIDO` | Etapa 1 |
 | **3** | **Universal Video Search Engine (Core do Mecanismo)** | `CONCLUIDO` | Etapa 1, 2 |
 | **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `CONCLUIDO` | Etapa 3 |
-| **5** | **Expansão de Plataformas (Vimeo, Dailymotion, Reddit, Twitch, TikTok, etc.)** | `PENDENTE` | Etapa 4 |
+| **5** | **Expansão de Plataformas (Vimeo, Dailymotion, Reddit, Twitch, TikTok, etc.)** | `CONCLUIDO` | Etapa 4 |
 | **6** | **Inteligência Artificial Local e Busca Semântica (Ollama)** | `PENDENTE` | Etapa 3, 5 |
 | **7** | **Pesquisa em Transcrições e Timestamps ("Encontrar Trecho")** | `PENDENTE` | Etapa 4, 6 |
 | **8** | **Autenticação, Favoritos, Coleções e Histórico** | `PENDENTE` | Etapa 1, 3 |
@@ -147,7 +147,7 @@
 - **Critérios de Aceitação:**
   - O usuário pode selecionar/desmarcar provedores específicos nos filtros da interface.
   - Se uma plataforma estiver instável, os demais provedores retornam seus resultados normalmente sem gerar erro 500.
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 4
 
 ---
@@ -191,7 +191,7 @@
   - Ao pesquisar uma frase existente na transcrição autorizada de um vídeo, o card exibe o momento exato em formato `MM:SS`.
   - Clicar em "Assistir a partir de MM:SS" abre o vídeo no ponto correto.
   - Vídeos sem legendas públicas exibem a mensagem clara: "Não foi possível verificar falas dentro deste vídeo".
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 4, 6
 
 ---
@@ -237,7 +237,7 @@
 - **Critérios de Aceitação:**
   - Administrador consegue testar um conector em tempo real e visualizar o status verde/vermelho.
   - Estatísticas de pesquisas e consumo de cotas exibidas com gráficos funcionais.
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 4, 8
 
 ---

@@ -149,5 +149,13 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Implementado `VideoSearchCache` com TTL de 24h para buscas e 72h para vídeos, garantindo cache hit em 1ms.
   - Integrado no frontend Next.js (`/search`) para consumo em tempo real da API com skeletons pulsantes e exibição de vídeos autênticos com thumbnails em alta resolução.
   - Endpoints `/api/admin/quota` e `/api/admin/cache/clear` validados com sucesso.
-- [ ] **Etapa 5 (Próxima):** Expansão de Plataformas — Criação de adaptadores dedicados para Vimeo, Dailymotion, Reddit, Twitch e redes sociais curtas (TikTok / Instagram Reels) com Circuit Breaker individual.
+- [x] **Etapa 5 Concluída (Expansão de Plataformas & Resiliência):**
+  - Implementado `CircuitBreaker` no Redis com estados `CLOSED`, `OPEN` e `HALF_OPEN`, protegendo contra latência e falhas em cascata de provedores externos.
+  - Implementado `DailymotionProvider` com consumo da API REST oficial e pública sem necessidade de credenciais pagas, suportando ordenação e filtros nativos de duração.
+  - Implementado `TikTokDiscoveryProvider` com extração de vídeos públicos curtos (`@usuario/video/{id}`).
+  - Implementado `VimeoProvider` com extração de vídeos em alta resolução e identificador canônico `vimeo:{id}`.
+  - Implementado `RedditProvider` localizando posts com vídeos hospedados (`v.redd.it` e `r/videos`).
+  - Implementado `SocialReelsDiscoveryProvider` cobrindo vídeos no formato vertical (Instagram Reels).
+  - Orquestrador agora despacha 7 fontes de pesquisa com isolamento de falhas, retornando mais de 140 vídeos reais deduplicados por consulta ampla.
+- [ ] **Etapa 6 (Próxima):** Inteligência Artificial Local e Busca Semântica (Ollama) — Conectar os modelos já existentes no host (`qwen2.5vl:7b` e `gpt-oss:20b`) via container `videofinder-ollama` para expansão de queries e similaridade cosseno de vetores.
 
