@@ -182,6 +182,21 @@ function SearchResultsContent() {
             setVideos([]);
             setTotalCount(0);
           }
+
+          // Gravação automática no histórico do usuário se habilitado
+          if (typeof window !== 'undefined' && localStorage.getItem('videofinder_record_history') !== 'false') {
+            fetch('/api/history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({
+                query: searchTerm,
+                platform_filters: selectedPlatform === 'all' ? [] : [selectedPlatform],
+                duration_filter: selectedDuration,
+                mode: searchParams.get('ai') === '1' ? 'ai_semantic' : 'simple',
+                results_count: json.data?.total || json.data?.results?.length || 0,
+              }),
+            }).catch(() => {});
+          }
         }
       }
     } catch (err) {

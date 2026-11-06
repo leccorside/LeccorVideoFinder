@@ -1,60 +1,161 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 type SettingsTab = 'platforms' | 'ai' | 'api_keys' | 'general';
 
-interface PlatformToggle {
+interface ProviderItem {
   id: string;
   name: string;
   category: string;
-  isEnabled: boolean;
-  requiresKey: boolean;
-  status: string;
+  quota_used: string;
+  enabled: boolean;
+  circuit: string;
 }
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('platforms');
-  const [ollamaHost, setOllamaHost] = useState('http://127.0.0.1:11435');
+  const [providers, setProviders] = useState<ProviderItem[]>([]);
   const [activeModel, setActiveModel] = useState('qwen2.5vl:7b');
+  const [availableModels, setAvailableModels] = useState<string[]>(['qwen2.5vl:7b', 'gpt-oss:20b']);
   const [ollamaTestStatus, setOllamaTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [youtubeApiKey, setYoutubeApiKey] = useState('');
   const [youtubeQuotaLimit, setYoutubeQuotaLimit] = useState(9000);
-  const [isSaved, setIsSaved] = useState(false);
+  const [cacheTtl, setCacheTtl] = useState('24');
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [isPurging, setIsPurging] = useState(false);
 
-  const [platforms, setPlatforms] = useState<PlatformToggle[]>([
-    { id: 'youtube', name: 'YouTube Data API v3', category: 'API Oficial Gratuita', isEnabled: true, requiresKey: true, status: 'Pronto' },
-    { id: 'tiktok', name: 'TikTok Discovery Web', category: 'Descoberta Web (SearXNG)', isEnabled: true, requiresKey: false, status: 'Ativo' },
-    { id: 'instagram', name: 'Instagram Reels Web', category: 'Descoberta Web (SearXNG)', isEnabled: true, requiresKey: false, status: 'Ativo' },
-    { id: 'vimeo', name: 'Vimeo API v3', category: 'API Oficial Gratuita', isEnabled: true, requiresKey: false, status: 'Ativo' },
-    { id: 'dailymotion', name: 'Dailymotion API', category: 'API REST Pública', isEnabled: true, requiresKey: false, status: 'Ativo' },
-    { id: 'reddit', name: 'Reddit Video Discovery', category: 'API Pública Aberta', isEnabled: true, requiresKey: false, status: 'Ativo' },
-    { id: 'twitch', name: 'Twitch Helix Clips', category: 'API Oficial Gratuita', isEnabled: true, requiresKey: true, status: 'Pendente Key' },
-    { id: 'kwai', name: 'Kwai Video Search', category: 'Descoberta Web (SearXNG)', isEnabled: true, requiresKey: false, status: 'Ativo' },
-  ]);
-
-  const togglePlatform = (id: string) => {
-    setPlatforms(
-      platforms.map((p) => (p.id === id ? { ...p, isEnabled: !p.isEnabled } : p))
-    );
+  const showToast = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 3500);
   };
 
-  const handleTestOllama = () => {
+  // Carregar configurações reais e provedores
+  const loadInitialData = async () => {
+    try {
+      const [provRes, settRes, modelsRes] = await Promise.all([
+        fetch('/api/admin/providers', { headers: { Accept: 'application/json' } }),
+        fetch('/api/admin/settings', { headers: { Accept: 'application/json' } }),
+        fetch('/api/ai/models', { headers: { Accept: 'application/json' } }),
+      ]);
+
+      if (provRes.ok) {
+        const provJson = await provRes.json();
+        if (provJson.success) setProviders(provJson.data);
+      }
+
+      if (settRes.ok) {
+        const settJson = await settRes.json();
+        if (settJson.success) {
+          setCacheTtl(String(settJson.data.search_cache_ttl_hours || 24));
+          setActiveModel(settJson.data.default_ai_model || 'qwen2.5vl:7b');
+          setYoutubeQuotaLimit(settJson.data.youtube_daily_quota_limit || 9000);
+        }
+      }
+
+      if (modelsRes.ok) {
+        const mJson = await modelsRes.json();
+        if (mJson.models && Array.isArray(mJson.models)) {
+          setAvailableModels(mJson.models);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar dados de configuração:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const togglePlatform = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/providers/${id}/toggle`, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setProviders((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, enabled: json.enabled } : p))
+        );
+        showToast(json.message);
+      }
+    } catch (err) {
+      console.error('Erro ao alternar provedor:', err);
+    }
+  };
+
+  const handleTestOllama = async () => {
     setOllamaTestStatus('testing');
-    setTimeout(() => {
-      setOllamaTestStatus('success');
-    }, 800);
+    try {
+      const res = await fetch('/api/ai/models', {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        setOllamaTestStatus('success');
+        showToast('Conexão com Ollama host confirmada! Modelos locais detectados.');
+      } else {
+        setOllamaTestStatus('error');
+      }
+    } catch {
+      setOllamaTestStatus('error');
+    }
   };
 
-  const handleSaveAll = (e: React.FormEvent) => {
+  const handlePurgeCache = async () => {
+    if (!confirm('Deseja purgar todo o cache do Redis? Consultas subsequentes farão novas varreduras.')) {
+      return;
+    }
+    setIsPurging(true);
+    try {
+      const res = await fetch('/api/admin/cache/flush-all', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        showToast(json.message || 'Cache purgado com sucesso!');
+      }
+    } catch (err) {
+      console.error('Erro ao purgar cache:', err);
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const handleSaveAll = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          search_cache_ttl_hours: Number(cacheTtl),
+          default_ai_model: activeModel,
+          youtube_daily_quota_limit: youtubeQuotaLimit,
+        }),
+      });
+      if (res.ok) {
+        showToast('Configurações do sistema salvas com sucesso no Redis!');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar configurações:', err);
+    }
   };
 
   return (
     <div className="flex flex-col w-full px-space-md lg:px-margin py-space-lg max-w-5xl mx-auto gap-space-lg">
+      {/* Toast Feedback */}
+      {feedback && (
+        <div className="fixed bottom-6 right-6 z-50 bg-surface-container-high text-primary-neon px-4 py-2.5 rounded-xl border border-primary-neon/30 text-xs font-mono shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <span className="material-symbols-outlined text-[18px]">verified</span>
+          <span>{feedback}</span>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-space-sm border-b border-[#27272A]/50">
         <div>
@@ -64,12 +165,15 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {isSaved && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary-neon/20 border border-secondary-neon text-secondary-neon font-sans text-xs font-semibold animate-in fade-in">
-            <span className="material-symbols-outlined text-[16px]">check_circle</span>
-            <span>Configurações salvas com sucesso!</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/providers"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-sans text-xs font-medium border border-[#27272A] transition-all"
+          >
+            <span className="material-symbols-outlined text-[16px] text-secondary-neon">bolt</span>
+            <span>Painel Avançado de Conectores</span>
+          </Link>
+        </div>
       </div>
 
       {/* Tabs de Navegação */}
@@ -85,7 +189,7 @@ export default function SettingsPage() {
           )}
         >
           <span className="material-symbols-outlined text-[18px]">hub</span>
-          <span>Plataformas & Conectores</span>
+          <span>Plataformas & Conectores ({providers.length})</span>
         </button>
 
         <button
@@ -127,7 +231,7 @@ export default function SettingsPage() {
           )}
         >
           <span className="material-symbols-outlined text-[18px]">tune</span>
-          <span>Preferências Gerais</span>
+          <span>Cache & Preferências</span>
         </button>
       </div>
 
@@ -141,10 +245,17 @@ export default function SettingsPage() {
                 Ative ou desative fontes de dados individualmente. O sistema continua operando mesmo se uma ou mais fontes forem desativadas.
               </p>
             </div>
+            <Link
+              href="/admin/providers"
+              className="text-xs font-sans text-primary-neon hover:underline flex items-center gap-1"
+            >
+              <span>Testar Conexões</span>
+              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
-            {platforms.map((p) => (
+            {providers.map((p) => (
               <div
                 key={p.id}
                 className="p-space-md rounded-xl bg-surface-container-low border border-[#27272A] flex items-center justify-between gap-4"
@@ -156,7 +267,9 @@ export default function SettingsPage() {
                       {p.category}
                     </span>
                   </div>
-                  <span className="font-sans text-xs text-secondary-neon block mt-0.5">{p.status}</span>
+                  <span className="font-sans text-xs text-secondary-neon block mt-0.5">
+                    {p.enabled ? 'Ativo na Busca' : 'Desativado'} • Cota: {p.quota_used}
+                  </span>
                 </div>
 
                 <button
@@ -164,14 +277,14 @@ export default function SettingsPage() {
                   onClick={() => togglePlatform(p.id)}
                   className={cn(
                     'w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5',
-                    p.isEnabled ? 'bg-primary-neon' : 'bg-surface-container-high'
+                    p.enabled ? 'bg-primary-neon' : 'bg-surface-container-high'
                   )}
-                  title={p.isEnabled ? 'Desativar provedor' : 'Ativar provedor'}
+                  title={p.enabled ? 'Desativar provedor' : 'Ativar provedor'}
                 >
                   <span
                     className={cn(
                       'w-5 h-5 rounded-full bg-white shadow-md transform transition-transform',
-                      p.isEnabled ? 'translate-x-5' : 'translate-x-0'
+                      p.enabled ? 'translate-x-5' : 'translate-x-0'
                     )}
                   />
                 </button>
@@ -198,30 +311,33 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
             <div className="flex flex-col gap-1.5">
-              <label className="font-sans text-xs text-outline font-medium">Endpoint Local do Ollama</label>
+              <label className="font-sans text-xs text-outline font-medium">Endpoint do Ollama no Docker</label>
               <input
                 type="text"
-                value={ollamaHost}
-                onChange={(e) => setOllamaHost(e.target.value)}
-                className="p-2.5 rounded-xl bg-surface-container-lowest border border-[#27272A] font-mono text-xs text-on-surface focus:outline-none focus:border-secondary-neon"
+                disabled
+                value="http://videofinder-ollama:11434"
+                className="p-2.5 rounded-xl bg-surface-container-lowest border border-[#27272A] font-mono text-xs text-secondary-neon"
               />
               <span className="font-sans text-[11px] text-outline">
-                Dentro do Docker Compose, resolvido via <code className="text-secondary-neon">host.docker.internal:11435</code>
+                Modelos montados a partir de <code className="text-secondary-neon">~/.ollama/models</code> do Windows.
               </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="font-sans text-xs text-outline font-medium">Modelo Ativo para Expansão</label>
+              <label className="font-sans text-xs text-outline font-medium">Modelo Ativo para Expansão Semântica</label>
               <select
                 value={activeModel}
                 onChange={(e) => setActiveModel(e.target.value)}
                 className="p-2.5 rounded-xl bg-surface-container-lowest border border-[#27272A] font-sans text-xs text-on-surface focus:outline-none focus:border-secondary-neon"
               >
-                <option value="qwen2.5vl:7b">qwen2.5vl:7b (Instalado na máquina - 5.9 GB)</option>
-                <option value="gpt-oss:20b">gpt-oss:20b (Instalado na máquina - 13.7 GB)</option>
+                {availableModels.map((m) => (
+                  <option key={m} value={m}>
+                    {m} (Instalado localmente)
+                  </option>
+                ))}
               </select>
               <span className="font-sans text-[11px] text-outline">
-                Modelos lidos diretamente da pasta <code className="text-primary-neon">~/.ollama/models</code>
+                Modelos detectados na máquina: <strong>{availableModels.join(', ')}</strong>
               </span>
             </div>
           </div>
@@ -238,7 +354,7 @@ export default function SettingsPage() {
                 {ollamaTestStatus === 'testing'
                   ? 'Testando conexão...'
                   : ollamaTestStatus === 'success'
-                  ? 'Conexão OK! (Status 200)'
+                  ? 'Conexão OK! (Modelos Prontos)'
                   : 'Testar Conexão com Ollama'}
               </span>
             </button>
@@ -246,7 +362,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleSaveAll}
-              className="px-5 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:bg-primary-hover shadow-md transition-all"
+              className="px-5 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:brightness-110 shadow-md transition-all"
             >
               Salvar Alterações
             </button>
@@ -305,7 +421,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleSaveAll}
-              className="px-5 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:bg-primary-hover shadow-md transition-all"
+              className="px-5 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:brightness-110 shadow-md transition-all"
             >
               Salvar Credenciais
             </button>
@@ -313,10 +429,10 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Conteúdo da Aba 4: Preferências Gerais */}
+      {/* Conteúdo da Aba 4: Cache & Preferências */}
       {activeTab === 'general' && (
         <div className="p-space-lg rounded-2xl bg-surface-container-low border border-[#27272A] flex flex-col gap-space-md">
-          <h2 className="font-display font-semibold text-base text-on-surface">Preferências de Busca & Cache</h2>
+          <h2 className="font-display font-semibold text-base text-on-surface">Preferências de Busca & Cache Redis</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
             <div className="flex flex-col gap-1.5">
@@ -330,7 +446,11 @@ export default function SettingsPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="font-sans text-xs text-outline font-medium">Persistência do Cache Redis</label>
-              <select className="p-2.5 rounded-xl bg-surface-container-lowest border border-[#27272A] font-sans text-xs text-on-surface focus:outline-none focus:border-primary-neon">
+              <select
+                value={cacheTtl}
+                onChange={(e) => setCacheTtl(e.target.value)}
+                className="p-2.5 rounded-xl bg-surface-container-lowest border border-[#27272A] font-sans text-xs text-on-surface focus:outline-none focus:border-primary-neon"
+              >
                 <option value="24">24 horas (Recomendado)</option>
                 <option value="48">48 horas</option>
                 <option value="72">72 horas (Máxima economia de cotas)</option>
@@ -338,11 +458,33 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Seção de Limpeza de Cache Geral */}
+          <div className="p-4 rounded-xl bg-surface-container-lowest border border-[#27272A] flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+            <div>
+              <span className="font-display font-semibold text-sm text-on-surface block">
+                Limpeza Geral de Cache Redis
+              </span>
+              <span className="font-sans text-xs text-outline">
+                Expurga todas as pesquisas e metadados cacheados para forçar novas requisições frescas.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              disabled={isPurging}
+              onClick={handlePurgeCache}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-error/40 text-error hover:bg-error/10 font-sans text-xs font-semibold transition-all shrink-0 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+              <span>{isPurging ? 'Purgando...' : 'Purgar Todo o Cache'}</span>
+            </button>
+          </div>
+
           <div className="flex justify-end pt-space-xs border-t border-[#27272A]/50">
             <button
               type="button"
               onClick={handleSaveAll}
-              className="px-5 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:bg-primary-hover shadow-md transition-all"
+              className="px-5 py-2 rounded-xl bg-primary-neon text-white font-sans text-xs font-semibold hover:brightness-110 shadow-md transition-all"
             >
               Salvar Preferências
             </button>
@@ -352,4 +494,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VideoSearchResult, VideoTranscriptSegment } from '@/types';
 import { formatDuration, cn } from '@/lib/utils';
 
@@ -14,11 +14,45 @@ interface TranscriptDrawerProps {
 export function TranscriptDrawer({ video, isOpen, onClose, query = '' }: TranscriptDrawerProps) {
   const [filterText, setFilterText] = useState('');
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(0);
+  const [apiSegments, setApiSegments] = useState<VideoTranscriptSegment[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [copiedTime, setCopiedTime] = useState<number | null>(null);
+
+  // Carregar transcrições da API caso o vídeo não traga segmentos embutidos
+  useEffect(() => {
+    if (!isOpen || !video) return;
+
+    if (video.transcript?.segments && video.transcript.segments.length > 0) {
+      setApiSegments(video.transcript.segments);
+      return;
+    }
+
+    setIsLoading(true);
+    const platform = video.platform || 'youtube';
+    const externalId = video.externalId || '';
+    const title = encodeURIComponent(video.title || '');
+    const desc = encodeURIComponent(video.description || '');
+
+    fetch(`/api/videos/${platform}/${externalId}/transcript?title=${title}&description=${desc}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data?.segments && json.data.segments.length > 0) {
+          const mapped = json.data.segments.map((s: any) => ({
+            startTime: s.start_time ?? s.startTime,
+            endTime: s.end_time ?? s.endTime,
+            text: s.text,
+            speaker: s.speaker,
+          }));
+          setApiSegments(mapped);
+        }
+      })
+      .catch((err) => console.log('Erro ao buscar transcrição:', err))
+      .finally(() => setIsLoading(false));
+  }, [isOpen, video]);
 
   if (!isOpen || !video) return null;
 
-  const transcript = video.transcript;
-  const segments: VideoTranscriptSegment[] = transcript?.segments || [
+  const segments: VideoTranscriptSegment[] = apiSegments || video.transcript?.segments || [
     {
       startTime: video.matchedTimestamp || 45,
       endTime: (video.matchedTimestamp || 45) + 8,
@@ -43,13 +77,26 @@ export function TranscriptDrawer({ video, isOpen, onClose, query = '' }: Transcr
   const activeSegment = segments[activeSegmentIndex] || segments[0];
 
   const getTimestampUrl = (seconds: number) => {
-    const url = new URL(video.originalUrl);
-    if (video.platform === 'youtube') {
-      url.searchParams.set('t', `${Math.floor(seconds)}s`);
-    } else {
-      url.hash = `t=${Math.floor(seconds)}`;
+    try {
+      const url = new URL(video.originalUrl);
+      if (video.platform === 'youtube') {
+        url.searchParams.set('t', `${Math.floor(seconds)}s`);
+      } else if (video.platform === 'dailymotion') {
+        url.searchParams.set('start', `${Math.floor(seconds)}`);
+      } else {
+        url.hash = `t=${Math.floor(seconds)}s`;
+      }
+      return url.toString();
+    } catch {
+      return `${video.originalUrl}&t=${Math.floor(seconds)}s`;
     }
-    return url.toString();
+  };
+
+  const handleCopyLink = (seconds: number) => {
+    const url = getTimestampUrl(seconds);
+    navigator.clipboard.writeText(url);
+    setCopiedTime(seconds);
+    setTimeout(() => setCopiedTime(null), 2000);
   };
 
   return (
@@ -217,16 +264,35 @@ export function TranscriptDrawer({ video, isOpen, onClose, query = '' }: Transcr
                     )}
                   </div>
 
-                  <a
-                    href={getTimestampUrl(segment.startTime)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-1 rounded text-outline hover:text-primary-neon opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Abrir no vídeo oficial a partir deste ponto"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                  </a>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyLink(segment.startTime);
+                      }}
+                      className={cn(
+                        "p-1 rounded transition-colors",
+                        copiedTime === segment.startTime ? "text-secondary-neon" : "text-outline hover:text-on-surface"
+                      )}
+                      title={copiedTime === segment.startTime ? "Link copiado!" : "Copiar link no segundo exato"}
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {copiedTime === segment.startTime ? 'check' : 'content_copy'}
+                      </span>
+                    </button>
+
+                    <a
+                      href={getTimestampUrl(segment.startTime)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1 rounded text-outline hover:text-primary-neon transition-colors"
+                      title="Abrir no vídeo oficial a partir deste ponto"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                    </a>
+                  </div>
                 </div>
               );
             })

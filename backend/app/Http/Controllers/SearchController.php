@@ -16,6 +16,7 @@ use App\Services\Providers\YouTubeQuotaGuard;
 use App\Services\Search\CanonicalDeduplicator;
 use App\Services\Search\RelevanceScorer;
 use App\Services\Search\UniversalSearchOrchestrator;
+use App\Services\Transcript\TranscriptSearchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -26,6 +27,7 @@ class SearchController extends Controller
     protected SemanticSearchOrchestrator $semanticOrchestrator;
     protected YouTubeQuotaGuard $quotaGuard;
     protected VideoSearchCache $cache;
+    protected TranscriptSearchService $transcriptService;
 
     public function __construct()
     {
@@ -33,6 +35,7 @@ class SearchController extends Controller
         $scorer = new RelevanceScorer();
         $this->quotaGuard = new YouTubeQuotaGuard();
         $this->cache = new VideoSearchCache();
+        $this->transcriptService = new TranscriptSearchService();
 
         $this->orchestrator = new UniversalSearchOrchestrator($deduplicator, $scorer);
         $this->semanticOrchestrator = new SemanticSearchOrchestrator($this->orchestrator);
@@ -96,6 +99,11 @@ class SearchController extends Controller
             $response = $this->semanticOrchestrator->search($queryDTO);
         } else {
             $response = $this->orchestrator->search($queryDTO);
+        }
+
+        // Enriquece os resultados com transcrições e minutagens sincronizadas
+        if (!empty($response['results'])) {
+            $response['results'] = $this->transcriptService->enrichResults($response['results'], $queryDTO->query);
         }
 
         return response()->json([

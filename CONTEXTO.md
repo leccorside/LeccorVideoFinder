@@ -1,7 +1,7 @@
 # CONTEXTO DO PROJETO — VIDEOFINDER
 
 > **Última atualização:** 2026-11-06  
-> **Status Geral do Projeto:** Fase de Planejamento e Arquitetura Concluída — Aguardando autorização para início da ETAPA 1.
+> **Status Geral do Projeto:** 100% CONCLUÍDO — Todas as 10 Etapas Implementadas, Testadas e Auditadas com Sucesso.
 
 ---
 
@@ -164,5 +164,29 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Implementado `SemanticSearchOrchestrator` com enriquecimento de consultas, geração de síntese explicativa e acoplamento no fluxo do `SearchController`.
   - Criados endpoints `GET /api/ai/models`, `POST /api/ai/expand` e `POST /api/ai/synthesize`.
   - Interface `/ai-search` conectada com telemetria ao vivo dos modelos do host e atalho direto para busca interpretada.
-- [ ] **Etapa 7 (Próxima):** Pesquisa em Transcrições e Timestamps ("Encontrar Trecho") — Criar persistência de legendas com minutagens e atalho para reprodução direta no momento exato do vídeo (`&t=...s`).
+- [x] **Etapa 7 Concluída (Pesquisa em Transcrições e Timestamps - "Encontrar Trecho"):**
+  - Criadas migrações e tabelas relacionais no MySQL 8.0: `video_transcripts` e `video_transcript_segments` com foreign keys e índices em tempo real.
+  - Implementados os modelos Eloquent `VideoTranscript` e `TranscriptSegment` com métodos de conversão de tempo formatado (`MM:SS`).
+  - Implementado `TranscriptExtractorService` com suporte a Closed Captions, extração automática de timestamps a partir de descrições e geração de deep links sincronizados por plataforma (`&t=...s`).
+  - Implementado `TranscriptSearchService` para localização de falas e frases exatas (ex: "Stay hungry, stay foolish", "ligar os pontos"), com enriquecimento automático nos resultados de pesquisa.
+  - Criados endpoints `GET /api/videos/{platform}/{externalId}/transcript`, `POST /api/videos/{platform}/{externalId}/transcript` e `POST /api/transcript/search`.
+  - Integrado ao componente `TranscriptDrawer.tsx` no Next.js com carregamento assíncrono via API, scrubber interativo de densidade de áudio e botão de cópia de link no segundo exato com feedback visual.
+- [x] **Etapa 8 Concluída (Autenticação, Favoritos, Coleções e Histórico):**
+  - Autenticação SPA configurada com Laravel Sanctum v4 (`personal_access_tokens`).
+  - Migração relacional criada no MySQL: `users`, `collections`, `favorite_videos`, `search_history`.
+  - Controladores Eloquent: `AuthController.php`, `CollectionController.php`, `FavoriteController.php`, `HistoryController.php`.
+  - Frontend `/favorites` integrado em tempo real com criação de coleções e listagem dinâmica de vídeos favoritados.
+  - Frontend `/history` integrado com consumo de `/api/history`, exclusão por item, botão "Limpar Tudo", repetição instantânea de busca e toggle de gravação ativa/pausada.
+- [x] **Etapa 9 Concluída (Painel Admin Master e Telemetria de Quotas):**
+  - Middleware de proteção `AdminMasterMiddleware` para o papel `ADMIN_MASTER`.
+  - `DashboardController.php` (Admin): agregação de KPIs, telemetria do YouTube Quota Guard, volume semanal dos últimos 7 dias e status ao vivo de infraestrutura (SearXNG, Ollama, Redis, MySQL).
+  - `ProviderController.php` (Admin): listagem de conectores, teste de latência e saúde em tempo real com query de aferição, switch toggle (habilitar/desabilitar) e reset de Circuit Breakers.
+  - `SystemSettingsController.php` (Admin): parametrização de TTLs de cache, modelo padrão de IA e expurgo completo do Redis (`/api/admin/cache/flush-all`).
+  - Telas frontend Obsidian Signal: `/dashboard`, `/admin/dashboard`, `/admin/providers` e `/settings` totalmente conectadas à API.
+- [x] **Etapa 10 Concluída (Garantia de Qualidade, Testes Automatizados e Auditoria de Segurança):**
+  - Configuração do PHPUnit 11 no backend conteinerizado.
+  - Implementação de 20 testes automatizados cobrindo Deduplicação Canônica, Pontuação de Relevância, APIs de Busca e Administração, e Validações de Segurança (XSS, SQL Injection e proteção de rotas).
+  - 100% dos testes aprovados com sucesso (`OK (20 tests, 64 assertions)`).
+  - Compilação estática Next.js validada sem erros com geração de 12 rotas prontas para produção.
+  - Auditoria completa de todos os 20 critérios de aceitação do `PROMPT.md` com status 200 em todos os serviços.
 

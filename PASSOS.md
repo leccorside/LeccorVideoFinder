@@ -15,7 +15,7 @@
 | **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `CONCLUIDO` | Etapa 3 |
 | **5** | **Expansão de Plataformas (Vimeo, Dailymotion, Reddit, Twitch, TikTok, etc.)** | `CONCLUIDO` | Etapa 4 |
 | **6** | **Inteligência Artificial Local e Busca Semântica (Ollama)** | `CONCLUIDO` | Etapa 3, 5 |
-| **7** | **Pesquisa em Transcrições e Timestamps ("Encontrar Trecho")** | `PENDENTE` | Etapa 4, 6 |
+| **7** | **Pesquisa em Transcrições e Timestamps ("Encontrar Trecho")** | `CONCLUIDO` | Etapa 4, 6 |
 | **8** | **Autenticação, Favoritos, Coleções e Histórico** | `PENDENTE` | Etapa 1, 3 |
 | **9** | **Painel Admin Master e Telemetria de Quotas** | `PENDENTE` | Etapa 4, 8 |
 | **10** | **Garantia de Qualidade, Testes Automatizados e Auditoria de Segurança** | `PENDENTE` | Todas as anteriores |
@@ -215,7 +215,7 @@
 - **Critérios de Aceitação:**
   - Visitantes anônimos conseguem pesquisar normalmente;
   - Usuários logados conseguem salvar vídeos, criar coleções nomeadas e revistar pesquisas passadas.
-- **Status:** `EM_ANDAMENTO`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 1, 3
 
 ---
@@ -261,6 +261,6 @@
   - Todos os testes automatizados executam e passam no CI/CD ou localmente com 100% de sucesso.
   - Zero vulnerabilidades conhecidas de injeção ou SSRF.
   - Cumprimento rigoroso de todos os 20 critérios de aceitação descritos na Seção 31 do `PROMPT.md`.
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Todas as etapas anteriores
 

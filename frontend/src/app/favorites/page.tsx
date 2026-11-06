@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VideoSearchResult } from '@/types';
 import { VideoCard } from '@/components/video/VideoCard';
 import { TranscriptDrawer } from '@/components/video/TranscriptDrawer';
@@ -73,21 +73,72 @@ export default function FavoritesPage() {
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedTranscriptVideo, setSelectedTranscriptVideo] = useState<VideoSearchResult | null>(null);
 
-  const handleCreateCollection = (e: React.FormEvent) => {
+  // Carregar coleções e favoritos reais da API MySQL
+  useEffect(() => {
+    // 1. Coleções
+    fetch('/api/collections')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const apiCols: Collection[] = [
+            { id: 'all', name: 'Todos os Salvos', count: json.data.reduce((acc: number, c: any) => acc + (c.videos_count || 0), 0), icon: 'bookmarks' },
+            ...json.data.map((c: any) => ({
+              id: String(c.id),
+              name: c.title,
+              count: c.videos_count || 0,
+              icon: c.icon || 'folder',
+            })),
+          ];
+          setCollections(apiCols);
+        }
+      })
+      .catch((err) => console.log('Erro ao buscar coleções:', err));
+
+    // 2. Favoritos
+    fetch('/api/favorites')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setSavedVideos(json.data);
+        }
+      })
+      .catch((err) => console.log('Erro ao buscar favoritos:', err));
+  }, []);
+
+  const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCollectionName.trim()) return;
-    const newCol: Collection = {
-      id: `col-${Date.now()}`,
-      name: newCollectionName.trim(),
-      count: 0,
-      icon: 'folder',
-    };
-    setCollections([...collections, newCol]);
+
+    try {
+      const res = await fetch('/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newCollectionName.trim() }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const newCol: Collection = {
+          id: String(json.data.id),
+          name: json.data.title,
+          count: 0,
+          icon: json.data.icon || 'folder',
+        };
+        setCollections([...collections, newCol]);
+      }
+    } catch (err) {
+      console.log('Erro ao criar coleção:', err);
+    }
+
     setNewCollectionName('');
     setIsModalOpen(false);
   };
 
-  const handleRemoveFavorite = (video: VideoSearchResult) => {
+  const handleRemoveFavorite = async (video: VideoSearchResult) => {
+    try {
+      await fetch(`/api/favorites/${video.id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.log('Erro ao remover favorito:', err);
+    }
     setSavedVideos(savedVideos.filter((v) => v.id !== video.id));
   };
 
