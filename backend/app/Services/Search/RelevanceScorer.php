@@ -8,23 +8,40 @@ use App\DTOs\VideoSearchResultDTO;
 class RelevanceScorer
 {
     /**
+     * Remove acentos para comparação tolerante a variações ortográficas e diacríticos.
+     */
+    private function stripAccents(string $str): string
+    {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $str);
+        if ($ascii !== false && !empty($ascii)) {
+            return mb_strtolower($ascii, 'UTF-8');
+        }
+        return mb_strtolower($str, 'UTF-8');
+    }
+
+    /**
      * Calcula o score de relevância ponderado (0 a 100) para um item de vídeo.
      */
     public function score(VideoSearchResultDTO $video, SearchQueryDTO $query): VideoSearchResultDTO
     {
         $rawQuery = trim($query->query);
         $normalizedQuery = mb_strtolower($rawQuery, 'UTF-8');
+        $cleanQuery = $this->stripAccents($rawQuery);
+
         $title = mb_strtolower($video->title, 'UTF-8');
+        $cleanTitle = $this->stripAccents($video->title);
+
         $description = mb_strtolower($video->description, 'UTF-8');
+        $cleanDesc = $this->stripAccents($video->description);
 
         $score = 20; // Score base inicial
         $matchType = 'text_match';
         $matchedSnippet = $video->matchedSnippet;
         $matchedTimestamp = $video->matchedTimestamp;
 
-        // 1. Correspondência exata da frase inteira no título (+40 pontos)
-        if (!empty($normalizedQuery) && str_contains($title, $normalizedQuery)) {
-            $score += 40;
+        // 1. Correspondência exata da frase inteira no título (+45 pontos)
+        if (!empty($cleanQuery) && (str_contains($title, $normalizedQuery) || str_contains($cleanTitle, $cleanQuery))) {
+            $score += 45;
             $matchType = 'exact_phrase';
             $matchedSnippet = $video->title;
         }
@@ -33,7 +50,8 @@ class RelevanceScorer
         if ($video->transcript && !empty($video->transcript['segments'])) {
             foreach ($video->transcript['segments'] as $segment) {
                 $segText = mb_strtolower($segment['text'] ?? '', 'UTF-8');
-                if (str_contains($segText, $normalizedQuery)) {
+                $cleanSeg = $this->stripAccents($segment['text'] ?? '');
+                if (str_contains($segText, $normalizedQuery) || str_contains($cleanSeg, $cleanQuery)) {
                     $score += 35;
                     $matchType = 'transcript_match';
                     $matchedSnippet = $segment['text'];
@@ -46,24 +64,24 @@ class RelevanceScorer
             $matchType = 'transcript_match';
         }
 
-        // 3. Correspondência na Descrição (+15 pontos proporcionais)
-        if (!empty($normalizedQuery) && str_contains($description, $normalizedQuery)) {
-            $score += 15;
+        // 3. Correspondência na Descrição (+20 pontos proporcionais)
+        if (!empty($cleanQuery) && (str_contains($description, $normalizedQuery) || str_contains($cleanDesc, $cleanQuery))) {
+            $score += 20;
             if (!$matchedSnippet) {
                 $matchedSnippet = $this->extractSnippetAroundMatch($video->description, $rawQuery);
             }
         } else {
-            // Contagem de palavras isoladas na descrição
-            $words = array_filter(explode(' ', $normalizedQuery), fn($w) => mb_strlen($w) > 2);
+            // Contagem de palavras isoladas no título ou na descrição
+            $words = array_filter(explode(' ', $cleanQuery), fn($w) => mb_strlen($w) > 2);
             $foundWords = 0;
             foreach ($words as $word) {
-                if (str_contains($title, $word) || str_contains($description, $word)) {
+                if (str_contains($cleanTitle, $word) || str_contains($cleanDesc, $word)) {
                     $foundWords++;
                 }
             }
             if (count($words) > 0) {
                 $wordRatio = $foundWords / count($words);
-                $score += (int) ($wordRatio * 15);
+                $score += (int) ($wordRatio * 20);
             }
         }
 

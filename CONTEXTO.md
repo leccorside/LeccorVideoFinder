@@ -197,3 +197,18 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Compilação estática Next.js validada sem erros com geração de 12 rotas prontas para produção.
   - Auditoria completa de todos os 20 critérios de aceitação do `PROMPT.md` com status 200 em todos os serviços e endpoints.
 
+---
+
+## 7. Correções Recentes e Ajustes de Conectividade
+
+### Correção de Roteamento de API e Descarte de Mocks Estáticos (2026-11-06)
+1. **Roteamento de API Universal no Frontend (`next.config.mjs`):**
+   - **Diagnóstico:** Ao acessar a aplicação diretamente pela porta `18300` (porta do container do Next.js) em vez da porta unificada `18080` (Nginx), as chamadas para `/api/search` retornavam `404 Not Found` no Next.js.
+   - **Solução:** Configurado `rewrites()` no `next.config.mjs` direcionando `/api/:path*` internamente para `http://backend:8000/api/:path*`. Dessa forma, o sistema opera de forma idêntica tanto em `http://localhost:18080` quanto em `http://localhost:18300`.
+2. **Remoção de Mocks Estáticos de Fallback (`search/page.tsx`):**
+   - **Diagnóstico:** A página `/search` possuía dados estáticos mockados (`demoResults` com tema motivacional) como valor inicial do estado. Quando a requisição falhava silenciosamente por causa do 404 na porta 18300, a tela mantinha os cards mockados antigos exibidos, gerando a percepção de que a busca retornava vídeos desconexos do termo digitado.
+   - **Solução:** Removido o mock estático do feed; agora o estado inicial é limpo (`[]`), exibe skeletons durante a requisição real, renderiza os vídeos autênticos retornados pelos provedores e apresenta banner de alerta com opção de "Tentar Novamente" em caso de indisponibilidade.
+3. **Normalização de Acentuação e Tolerância a Diacríticos (`RelevanceScorer.php`):**
+   - **Diagnóstico:** Comparações puras com `str_contains` diferenciavam termos com e sem acento (ex: `perseveranca` vs `perseverança`), reduzindo o score de relevância de itens idênticos.
+   - **Solução:** Adicionada rotina de transliteração ASCII via `iconv` para comparar query e títulos/descrições tanto na forma acentuada quanto transliterada, concedendo pontuação máxima (+45 pontos) para correspondências exatas em português.
+

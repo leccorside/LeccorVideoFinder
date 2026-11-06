@@ -9,7 +9,17 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
       { protocol: 'http', hostname: '**' }
     ]
-  }
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.BACKEND_INTERNAL_URL 
+          ? `${process.env.BACKEND_INTERNAL_URL}/api/:path*` 
+          : 'http://backend:8000/api/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

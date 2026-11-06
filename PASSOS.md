@@ -279,7 +279,8 @@
   - Todos os 30 testes automatizados executam e passam com 100% de sucesso (`OK (30 tests, 118 assertions)`);
   - Compilação estática do Next.js sem erros (12 páginas otimizadas geradas);
   - Zero vulnerabilidades conhecidas de injeção ou SSRF;
-  - Cumprimento rigoroso de todos os 20 critérios de aceitação descritos na Seção 31 do `PROMPT.md`.
+  - Cumprimento rigoroso de todos os 20 critérios de aceitação descritos na Seção 31 do `PROMPT.md`;
+  - Roteamento universal de `/api/*` ativo no Next.js (`rewrites`) eliminando erros 404 em acessos diretos à porta `18300` e normalização ortográfica de buscas em português.
 - **Status:** `CONCLUIDO`
 - **Dependências:** Todas as etapas anteriores
 

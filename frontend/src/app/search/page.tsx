@@ -7,130 +7,20 @@ import { VideoCard } from '@/components/video/VideoCard';
 import { TranscriptDrawer } from '@/components/video/TranscriptDrawer';
 import { cn } from '@/lib/utils';
 
-// Lista de plataformas com badges e contadores simulados
+// Lista de plataformas com badges e contadores
 const platformsFilterList: { id: Platform | 'all'; label: string; count?: string }[] = [
   { id: 'all', label: 'Todas as Redes' },
-  { id: 'youtube', label: 'YouTube', count: '890' },
-  { id: 'tiktok', label: 'TikTok', count: '312' },
-  { id: 'instagram', label: 'Instagram', count: '145' },
-  { id: 'vimeo', label: 'Vimeo', count: '54' },
-  { id: 'dailymotion', label: 'Dailymotion', count: '18' },
-  { id: 'reddit', label: 'Reddit', count: '9' },
-];
-
-// Dados iniciais de demonstração baseados no protótipo Obsidian Signal
-const demoResults: VideoSearchResult[] = [
-  {
-    id: 'demo-1',
-    platform: 'youtube',
-    externalId: 'dQw4w9WgXcQ',
-    title: 'Disciplina é mais importante que motivação — O Poder do Hábito Diário',
-    description: 'Neste discurso inspirador, exploramos como a constância e o comprometimento superam qualquer pico de motivação passageira para alcançar grandes conquistas.',
-    originalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
-    author: 'Cortes de Sabedoria',
-    durationSeconds: 258,
-    publishedAt: 'há 3 dias',
-    viewsCount: 142000,
-    relevanceScore: 98,
-    matchType: 'transcript_match',
-    matchedSnippet: 'A disciplina é a única ponte que conecta os seus objetivos com a realização prática diária.',
-    matchedTimestamp: 94,
-    transcript: {
-      language: 'pt-BR',
-      isVerified: true,
-      segments: [
-        { startTime: 32, endTime: 48, text: 'Muitas pessoas esperam se sentir motivadas para começar a agir.' },
-        { startTime: 94, endTime: 112, text: 'A disciplina é a única ponte que conecta os seus objetivos com a realização prática diária.' },
-        { startTime: 145, endTime: 168, text: 'Se você fizer apenas nos dias em que estiver com vontade, você nunca construirá nada duradouro.' },
-      ],
-    },
-  },
-  {
-    id: 'demo-2',
-    platform: 'tiktok',
-    externalId: 'tt-82918',
-    title: 'Nunca desista dos seus sonhos, mesmo quando ninguém mais acreditar em você',
-    description: 'Um trecho emocionante sobre persistência após repetidos fracassos e rejeições no início da jornada profissional.',
-    originalUrl: 'https://www.tiktok.com/@motivacao/video/82918291',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&auto=format&fit=crop&q=80',
-    author: '@motivacao_diaria',
-    durationSeconds: 58,
-    publishedAt: 'há 1 semana',
-    viewsCount: 890000,
-    relevanceScore: 94,
-    matchType: 'exact_phrase',
-    matchedSnippet: 'Nunca desista dos seus sonhos, porque o fracasso de ontem é apenas o aprendizado de amanhã.',
-    matchedTimestamp: 12,
-  },
-  {
-    id: 'demo-3',
-    platform: 'vimeo',
-    externalId: 'vm-9021',
-    title: 'Persistência Criativa: Superando o Bloqueio e o Fracasso',
-    description: 'Documentário cinematográfico analisando a trajetória de artistas renomados que foram rejeitados dezenas de vezes antes de publicarem suas obras-primas.',
-    originalUrl: 'https://vimeo.com/90219021',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800&auto=format&fit=crop&q=80',
-    author: 'Cinema & Vida',
-    durationSeconds: 720,
-    publishedAt: 'há 2 meses',
-    viewsCount: 32000,
-    relevanceScore: 89,
-    matchType: 'semantic',
-    matchedSnippet: 'O fracasso não é o oposto do sucesso; ele é parte integrante do aprendizado de quem ousa construir.',
-    matchedTimestamp: 184,
-  },
-  {
-    id: 'demo-4',
-    platform: 'instagram',
-    externalId: 'ig-reel-44',
-    title: 'Por que o fracasso repetido molda os melhores líderes do mundo',
-    description: 'Entrevista curta demonstrando a importância de não desistir diante das adversidades do mercado corporativo.',
-    originalUrl: 'https://www.instagram.com/reel/Cx90821/',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80',
-    author: 'Liderança Moderna',
-    durationSeconds: 45,
-    publishedAt: 'há 4 dias',
-    viewsCount: 64000,
-    relevanceScore: 86,
-    matchType: 'text_match',
-    matchedSnippet: 'Líderes não desistem quando tudo parece dar errado.',
-  },
-  {
-    id: 'demo-5',
-    platform: 'dailymotion',
-    externalId: 'dm-x81',
-    title: 'Discurso de Formatura: A Arte de Continuar Tentando',
-    description: 'Cerimônia universitária completa com discurso motivacional sobre disciplina e sonhos.',
-    originalUrl: 'https://www.dailymotion.com/video/x81928',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
-    author: 'Universidade Aberta',
-    durationSeconds: 1140,
-    publishedAt: 'há 1 ano',
-    viewsCount: 15400,
-    relevanceScore: 81,
-    matchType: 'semantic',
-  },
-  {
-    id: 'demo-6',
-    platform: 'reddit',
-    externalId: 'rd-post-9',
-    title: 'Relato real: Como mudei de vida depois de fracassar em 3 negócios',
-    description: 'Vídeo relato de usuário no Reddit explicando sua jornada de consistência e superação emocional.',
-    originalUrl: 'https://www.reddit.com/r/desabafos/comments/video99',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80',
-    author: 'u/empreendedor_resiliente',
-    durationSeconds: 180,
-    publishedAt: 'há 5 dias',
-    viewsCount: 8200,
-    relevanceScore: 78,
-    matchType: 'unverified',
-  },
+  { id: 'youtube', label: 'YouTube' },
+  { id: 'tiktok', label: 'TikTok' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'vimeo', label: 'Vimeo' },
+  { id: 'dailymotion', label: 'Dailymotion' },
+  { id: 'reddit', label: 'Reddit' },
 ];
 
 function SearchResultsContent() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('q') || 'Nunca desista dos seus sonhos';
+  const initialQuery = searchParams.get('q') || '';
   const isAiInitial = searchParams.get('ai') === '1';
 
   const [query, setQuery] = useState(initialQuery);
@@ -139,7 +29,7 @@ function SearchResultsContent() {
   const [sortBy, setSortBy] = useState<string>('relevance');
   const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
   const [selectedTranscriptVideo, setSelectedTranscriptVideo] = useState<VideoSearchResult | null>(null);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set(['demo-1']));
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isSynthesizing, setIsSynthesizing] = useState(false);
 
   // Sincronizar favoritos existentes do MySQL
@@ -161,15 +51,23 @@ function SearchResultsContent() {
   }, []);
 
   // Estados de dados reais da API
-  const [videos, setVideos] = useState<VideoSearchResult[]>(demoResults);
-  const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState({ duration_ms: 340, total_providers: 2, from_cache: false });
-  const [totalCount, setTotalCount] = useState(demoResults.length);
+  const [videos, setVideos] = useState<VideoSearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(Boolean(initialQuery));
+  const [stats, setStats] = useState({ duration_ms: 0, total_providers: 0, from_cache: false });
+  const [totalCount, setTotalCount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Função para executar busca na API real
   const executeSearch = async (searchTerm: string) => {
-    if (!searchTerm.trim()) return;
+    if (!searchTerm.trim()) {
+      setVideos([]);
+      setTotalCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
       const response = await fetch('/api/search', {
@@ -179,7 +77,7 @@ function SearchResultsContent() {
           'Accept': 'application/json',
         },
         body: JSON.stringify({
-          q: searchTerm,
+          q: searchTerm.trim(),
           platforms: selectedPlatform === 'all' ? [] : [selectedPlatform],
           duration: selectedDuration,
           sort: sortBy,
@@ -189,17 +87,12 @@ function SearchResultsContent() {
       if (response.ok) {
         const json = await response.json();
         if (json.success && json.data && Array.isArray(json.data.results)) {
-          if (json.data.results.length > 0) {
-            setVideos(json.data.results);
-            setTotalCount(json.data.total || json.data.results.length);
-            if (json.data.stats) {
-              setStats(json.data.stats);
-            }
-          } else {
-            // Se não encontrou, mantém vazio para mostrar empty state
-            setVideos([]);
-            setTotalCount(0);
+          setVideos(json.data.results);
+          setTotalCount(json.data.total ?? json.data.results.length);
+          if (json.data.stats) {
+            setStats(json.data.stats);
           }
+          setErrorMessage(null);
 
           // Gravação automática no histórico do usuário se habilitado
           if (typeof window !== 'undefined' && localStorage.getItem('videofinder_record_history') !== 'false') {
@@ -215,10 +108,22 @@ function SearchResultsContent() {
               }),
             }).catch(() => {});
           }
+        } else {
+          setVideos([]);
+          setTotalCount(0);
         }
+      } else {
+        const errText = await response.text().catch(() => '');
+        console.error('Falha na resposta da API de busca:', response.status, errText);
+        setErrorMessage(`Falha na resposta da busca (HTTP ${response.status}). Certifique-se de que a API está respondendo.`);
+        setVideos([]);
+        setTotalCount(0);
       }
     } catch (err) {
-      console.error('Erro ao buscar vídeos reais:', err);
+      console.error('Erro de conexão ao buscar vídeos:', err);
+      setErrorMessage('Não foi possível conectar ao servidor de busca. Verifique se os contêineres estão ativos.');
+      setVideos([]);
+      setTotalCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -226,11 +131,13 @@ function SearchResultsContent() {
 
   useEffect(() => {
     const q = searchParams.get('q');
-    if (q) {
+    if (q && q.trim()) {
       setQuery(q);
       executeSearch(q);
     } else {
-      executeSearch(initialQuery);
+      setVideos([]);
+      setTotalCount(0);
+      setIsLoading(false);
     }
   }, [searchParams, selectedPlatform, selectedDuration, sortBy]);
 
@@ -468,7 +375,26 @@ function SearchResultsContent() {
 
       {/* SEÇÃO 2: FEED DE RESULTADOS */}
       <div className="px-space-md lg:px-margin pt-space-md">
-        {isLoading ? (
+        {errorMessage ? (
+          <div className="p-space-lg rounded-xl bg-tertiary-container/10 border border-tertiary-neon/40 text-center flex flex-col items-center justify-center gap-3">
+            <span className="material-symbols-outlined text-3xl text-tertiary-neon">error</span>
+            <div className="flex flex-col gap-1 max-w-lg">
+              <h3 className="font-display font-semibold text-base text-on-surface">
+                Erro ao processar a pesquisa
+              </h3>
+              <p className="font-sans text-xs text-on-surface-variant leading-relaxed">
+                {errorMessage}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => executeSearch(query)}
+              className="mt-2 px-4 py-2 rounded-lg bg-surface-container-high border border-[#27272A] hover:border-tertiary-neon text-xs font-semibold text-on-surface transition-all"
+            >
+              Tentar Novamente
+            </button>
+          </div>
+        ) : isLoading ? (
           <div className="grid gap-space-md grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="flex flex-col rounded-xl overflow-hidden bg-surface-container-low border border-[#27272A]/50 animate-pulse">
@@ -483,12 +409,18 @@ function SearchResultsContent() {
           </div>
         ) : videos.length === 0 ? (
           <div className="py-24 text-center flex flex-col items-center justify-center">
-            <span className="material-symbols-outlined text-4xl text-outline mb-2">videocam_off</span>
+            <span className="material-symbols-outlined text-4xl text-outline mb-2">
+              {query ? 'videocam_off' : 'search'}
+            </span>
             <h3 className="font-display font-semibold text-lg text-on-surface mb-1">
-              Nenhum vídeo localizado para os filtros selecionados
+              {query
+                ? 'Nenhum vídeo localizado para os filtros selecionados'
+                : 'Digite um termo ou frase para pesquisar'}
             </h3>
             <p className="font-sans text-xs text-outline max-w-md">
-              Tente redefinir a plataforma ou o filtro de duração para ampliar a busca universal.
+              {query
+                ? 'Tente ampliar os filtros de plataforma, alterar a duração ou buscar por sinônimos.'
+                : 'Pesquise por temas, falas em transcrições, criadores ou palavras-chave em múltiplas plataformas ao mesmo tempo.'}
             </p>
           </div>
         ) : (
@@ -507,7 +439,7 @@ function SearchResultsContent() {
                 layout={layoutMode}
                 onInspectTranscript={(v) => setSelectedTranscriptVideo(v)}
                 onToggleFavorite={toggleFavorite}
-                isFavorited={favoriteIds.has(video.id)}
+                isFavorited={favoriteIds.has(video.id) || (video.externalId ? favoriteIds.has(video.externalId) : false)}
               />
             ))}
           </div>
