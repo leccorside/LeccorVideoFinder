@@ -130,5 +130,11 @@ O orquestrador do backend processa as requisições de pesquisa através de um p
   - Configuração do Ollama apontada para a instalação existente no host (`127.0.0.1:11435` / `host.docker.internal:11435`).
   - Frontend Next.js 14 inicializado com design system Obsidian Signal e build validado (`next build` concluído com sucesso).
   - Backend Laravel 11 estruturado com API REST, endpoint `/api/health` e conexões configuradas.
-- [ ] **Etapa 2 (Próxima):** Construção detalhada de todas as telas e componentes da interface baseados nos protótipos em `uxui/` (Resultados de busca, Transcript Drawer, filtros avançados, visualização grid/lista).
+- [x] **Etapa 2 Concluída:**
+  - Design System **Obsidian Signal** totalmente transposto para componentes React/Next.js 14+ com Tailwind CSS.
+  - Criado o componente de card de vídeo [VideoCard.tsx](file:///d:/PROJETOS/cortes-youtube/frontend/src/components/video/VideoCard.tsx) (aspect ratio 16:9, zoom 1.03x, badges de evidência, duration chip em monospace e ações rápidas).
+  - Criado o painel lateral [TranscriptDrawer.tsx](file:///d:/PROJETOS/cortes-youtube/frontend/src/components/video/TranscriptDrawer.tsx) com linha do tempo interativa, scrubber ticks em ciano e atalho para reprodução direta no timestamp.
+  - Implementadas todas as rotas principais: `/` (Home com Omnibar), `/search` (Resultados de Busca com filtros, ordenação e switch Grid/List), `/ai-search` (Busca Semântica com modelos Ollama locais do host), `/favorites` (Favoritos e Coleções), `/history` (Histórico de Buscas), `/dashboard` (Telemetria ao Vivo) e `/settings` (Configurações completas).
+  - Compilação estática `next build` testada com 10 rotas geradas com 100% de sucesso.
+- [ ] **Etapa 3 (Próxima):** Universal Video Search Engine (Core do Mecanismo) — Criação dos contratos `VideoSearchProviderInterface`, DTOs imutáveis, orquestrador assíncrono de busca paralela, deduplicador canônico e endpoint Server-Sent Events (`/api/search/{id}/stream`).
 

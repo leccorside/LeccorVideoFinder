@@ -10,7 +10,7 @@
 | Etapa | Descrição | Status | Dependências |
 | :---: | :--- | :---: | :--- |
 | **1** | **Estrutura Inicial e Infraestrutura Conteinerizada** | `CONCLUIDO` | Nenhuma |
-| **2** | **Interface e Design System Obsidian Signal** | `PENDENTE` | Etapa 1 |
+| **2** | **Interface e Design System Obsidian Signal** | `CONCLUIDO` | Etapa 1 |
 | **3** | **Universal Video Search Engine (Core do Mecanismo)** | `PENDENTE` | Etapa 1, 2 |
 | **4** | **Primeiras Fontes Reais (YouTube API v3 & SearXNG)** | `PENDENTE` | Etapa 3 |
 | **5** | **Expansão de Plataformas (Vimeo, Dailymotion, Reddit, Twitch, TikTok, etc.)** | `PENDENTE` | Etapa 4 |
@@ -72,7 +72,7 @@
   - Navegação fluida entre telas sem recarregar a página.
   - Fidelidade visual comprovada com os templates HTML de `uxui/in_cio_busca_universal_de_v_deos` e `uxui/resultados_de_busca_videofinder`.
   - Design totalmente dark-mode nativo com responsividade completa.
-- **Status:** `PENDENTE`
+- **Status:** `CONCLUIDO`
 - **Dependências:** Etapa 1
 
 ---
@@ -99,7 +99,7 @@
 - **Critérios de Aceitação:**
   - O orquestrador processa buscas simuladas em múltiplos adaptadores retornando lista deduplicada e ranqueada.
   - Resultados chegam à interface progressivamente via SSE sem travamento da UI.
-- **Status:** `PENDENTE`
+- **Status:** `EM_ANDAMENTO`
 - **Dependências:** Etapa 1, 2
 
 ---
@@ -215,7 +215,7 @@
 - **Critérios de Aceitação:**
   - Visitantes anônimos conseguem pesquisar normalmente;
   - Usuários logados conseguem salvar vídeos, criar coleções nomeadas e revistar pesquisas passadas.
-- **Status:** `PENDENTE`
+- **Status:** `EM_ANDAMENTO`
 - **Dependências:** Etapa 1, 3
 
 ---
